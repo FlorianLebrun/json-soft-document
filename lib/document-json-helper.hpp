@@ -11,16 +11,20 @@ public:
    };
    struct tToken {
       enum tId {
-         STRING,
+         FirstValue_Token,
+         STRING = FirstValue_Token,
          NUMBER,
          INTEGER,
          BOOLEAN,
          NUL,
          BEGIN_ARRAY,
-         END_ARRAY, 
          BEGIN_OBJECT,
-         END_OBJECT, 
          BEGIN_XPR,
+         LastValue_Token = BEGIN_XPR,
+
+         // Not ex
+         END_ARRAY, 
+         END_OBJECT, 
          END_XPR,
          SEPARATOR, 
          ASSOCIATION,
@@ -50,15 +54,18 @@ public:
    int cursor;
    int bufferSize;
    int line;
+   bool lenient;
+
    Document* document;
 
    JsonDocumentReader(const char* set_buffer, int set_bufferSize, Document* set_archive) {
-      InitCharTable();
-      buffer = set_buffer;
-      bufferSize = set_bufferSize;
-      line = 1;
-      cursor = 0;
-      document = set_archive;
+      this->InitCharTable();
+      this->buffer = set_buffer;
+      this->bufferSize = set_bufferSize;
+      this->line = 1;
+      this->cursor = 0;
+      this->document = set_archive;
+      this->lenient = 0;
    }
    void InitCharTable() {
       memset(char_def, 0, sizeof(char_def));
@@ -380,9 +387,9 @@ public:
          while (token.id != tToken::END_OBJECT) {
             if (token.id == tToken::STRING) {
                peekProperty(obj);
-            } else {
+            }
+            else if(!this->lenient) {
                logError("the name/value list is mis formated");
-               break;
             }
             if (token.id != tToken::SEPARATOR) break;
             peekToken();
@@ -406,8 +413,13 @@ public:
       if (token.id == tToken::BEGIN_ARRAY) {
          peekToken();
          while (token.id != tToken::END_ARRAY) {
-            Item* item = obj->push_back(document);
-            peekValue(&item->value);
+            if(token.id <= tToken::LastValue_Token) {
+               Item* item = obj->push_back(document);
+               peekValue(&item->value);
+            }
+            else if(!this->lenient) {
+               logError("the value list is mis formated");
+            }
             if (token.id != tToken::SEPARATOR) break;
             peekToken();
          }
@@ -431,7 +443,9 @@ public:
          peekToken();
          while (token.id != tToken::END_XPR) {
             Item* arg = obj->push_back(document);
-            peekValue(&arg->value);
+            if (token.id != tToken::SEPARATOR) {
+               peekValue(&arg->value);
+            }
             if (token.id != tToken::SEPARATOR) break;
             peekToken();
          }

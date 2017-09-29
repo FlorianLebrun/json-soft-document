@@ -132,7 +132,7 @@ void main() {
       }
       printf("JSON::parse            = %5.3g Mops\n", c.GetOpsFloat(count, Chrono::Mops));
    }
-   if(0){
+   if(1){
       Value x(&doc);
       x["a"] = 5;
       x["b"] = 5.6f;
@@ -143,7 +143,7 @@ void main() {
       printf("stringify x: %s\n", JSON::stringify(x).c_str());
       Value y(&doc);
       std::string sx = JSON::stringify(x);
-      JSON::parse(y, "{\"d\":[\"x\",\"y\",\"z\",30],\"a\":5,\"b\":5.6,\"c\":{\"__classname\":\"MyClass\",\"hello\":9}}");
+      JSON::parse(y, "{\"d\":[\"x\",\"y\",\"z\",30],\"a\":5,\"b\":5.6,\"c\":{\"__classname\":\"MyClass\",\"hello\":9,}}");
       //JSON::parse(y, sx.c_str(), sx.size());
       y["d"].push_back() = 30;
       printf("stringify y: %s\n", JSON::stringify(y).c_str());
