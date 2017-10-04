@@ -2,8 +2,8 @@
 struct ObjectMap : Object {
    ObjectSymbol* classname;
    Property** hashmap;
-   uint32_t limit;
-   uint32_t shift;
+   int32_t limit;
+   int32_t shift;
 
    struct iterator {
       Property** chashmap;
@@ -83,17 +83,22 @@ struct ObjectMap : Object {
       else if(this->classname != other->classname) return false;
 
       // Compare hashmap
+      Property *propX, *propY;
       Property **hashmapX = this->hashmap, **hashmapY = other->hashmap;
-      while(hashmapX != EndOfPtr && hashmapY != EndOfPtr) {
-         Property *propX = hashmapX[0], *propY = hashmapY[0];
-         while(propX && propY) {
-            if(!propX->equals(propY)) return false;
-            propX=propX->next; propY=propY->next;
+      if(hashmapX && hashmapY) {
+         while((propX = hashmapX[0]) != EndOfPtr && (propY = hashmapY[0]) != EndOfPtr) {
+            while(propX && propY) {
+               if(!propX->equals(propY)) return false;
+               propX=propX->next; propY=propY->next;
+            }
+            if(propX != propY) return false; // Check the ending (null)
+            hashmapX++;hashmapY++;
          }
          if(propX != propY) return false; // Check the ending (null)
-         hashmapX++;hashmapY++;
       }
-      if(hashmapX != hashmapY) return false; // Check the ending (EndOfPtr)
+      else if(hashmapX != hashmapY) {
+         return false;
+      }
 
       return true;
    }
@@ -132,7 +137,7 @@ struct ObjectMap : Object {
          memset(new_map, 0, sizeof(void*)<<shift);
          new_map[1<<shift] = (Property*)EndOfPtr;
          this->hashmap = new_map;
-         this->limit = 1<<shift;
+         this->limit = 2<<shift;
       }
       else {
          uint32_t shift = ++this->shift;
@@ -140,6 +145,7 @@ struct ObjectMap : Object {
          Property** new_map = (Property**)document->allocHashMap(shift);
          new_map[1<<shift] = (Property*)EndOfPtr;
          this->hashmap = new_map;
+         this->limit = 2<<shift;
 
          uint32_t mask = 1<<(32-shift);
          while(old_map[0] != EndOfPtr) {

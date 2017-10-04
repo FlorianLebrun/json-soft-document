@@ -9,8 +9,25 @@ SoftDoc_IMPLn(void) Value::undefine() {
    this->_bits = 0;
 }
 SoftDoc_IMPLn(void) Value::set(TypeID typeID) {
-   this->typeID = typeID;
-   this->_bits = 0;
+   switch(typeID) {
+   case TypeID::Boolean:
+   case TypeID::Integer:
+   case TypeID::Number:
+   case TypeID::Null:
+      this->typeID = typeID;
+      this->_bits = 0;
+      return;
+   case TypeID::Array:
+      this->typeID = TypeID::Array;
+      this->_array = this->document->createObjectArray();
+      return;
+   case TypeID::Map:
+      this->typeID = TypeID::Map;
+      this->_map = this->document->createObjectMap();
+   default:
+      this->typeID = TypeID::Undefined;
+      this->_bits = 0;
+   }
 }
 SoftDoc_IMPLn(void) Value::set(bool x) {
    this->typeID = TypeID::Boolean;
@@ -46,7 +63,7 @@ SoftDoc_IMPLi(ObjectSymbol*) Value::className() {
 SoftDoc_IMPLi(Value&) Value::map(const char* key) {
    if(this->typeID != TypeID::Map) {
       this->typeID = TypeID::Map;
-      this->_object = this->document->createObjectMap();
+      this->_map = this->document->createObjectMap();
    }
    return this->_map->map(key, this->document)->value;
 }
@@ -70,14 +87,14 @@ SoftDoc_IMPLi(Value&) Value::get(intptr_t index) {
 SoftDoc_IMPLi(Value&) Value::push_front() {
    if(this->typeID != TypeID::Array) {
       this->typeID = TypeID::Array;
-      this->_object = this->document->createObjectArray();
+      this->_array = this->document->createObjectArray();
    }
    return this->_array->push_front(this->document)->value;
 }
 SoftDoc_IMPLi(Value&) Value::push_back() {
    if(this->typeID != TypeID::Array) {
       this->typeID = TypeID::Array;
-      this->_object = this->document->createObjectArray();
+      this->_array = this->document->createObjectArray();
    }
    return this->_array->push_back(this->document)->value;
 }
@@ -218,14 +235,14 @@ SoftDoc_IMPLi(ValueMetric) Value::getMetric() {
 
 
 SoftDoc_CTOR() Document::Document(int pageSize) {
-   tAllocPage* buf = new(malloc(sizeof(tAllocPage)+pageSize)) tAllocPage();
-   memset(buf->buffer, 0, pageSize);
+   this->pageSize = pageSize;
+   memset(this->hashMapReserve, 0, sizeof(this->hashMapReserve));
+
+   tAllocPage* buf = ((tAllocPage*)malloc(sizeof(tAllocPage)+this->pageSize));
    buf->next = 0;
    buf->used = 0;
    buf->size = pageSize;
    this->page = buf;
-   this->pageSize = pageSize;
-   memset(this->hashMapReserve, 0, sizeof(this->hashMapReserve));
 }
 SoftDoc_CTOR() Document::~Document() {
    while(this->page) {
@@ -235,17 +252,19 @@ SoftDoc_CTOR() Document::~Document() {
    }
 }
 SoftDoc_IMPLn(void*) Document::alloc(int size) {
-   tAllocPage* page = this->page;
+   tAllocPage* buf = this->page;
    size = align8(size);
-   if(page->used+size > page->size) {
-      tAllocPage* buf = new(malloc(sizeof(tAllocPage)+pageSize)) tAllocPage();
+   if(buf->used+size > buf->size) {
+      int buf_size = std::max(this->page->size, size<<4);
+      buf = ((tAllocPage*)malloc(sizeof(tAllocPage)+buf_size));
       buf->next = this->page;
       buf->used = 0;
-      buf->size = pageSize;
+      buf->size = buf_size;
       this->page = buf;
    }
-   void* ptr = &page->buffer[page->used];
-   page->used += size;
+   _ASSERT(buf->used+size <= buf->size);
+   void* ptr = &buf->buffer[buf->used];
+   buf->used += size;
    return ptr;
 }
 SoftDoc_IMPLn(void) Document::free(void* ptr, int size) {

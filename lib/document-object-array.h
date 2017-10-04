@@ -7,7 +7,8 @@ struct ObjectArray : Object {
    struct iterator {
       Item* item;
       inline iterator(ObjectArray* obj) {
-         this->item = obj->firstItem;
+         if(obj) this->item = obj->firstItem;
+         else this->item = 0;
       }
       inline Item* begin() {
          return this->item;
