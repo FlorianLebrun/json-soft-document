@@ -130,54 +130,57 @@ struct ObjectMap : Object {
       }
       return obj;
    }
-   void expand(Document* document) {
-      if(!this->hashmap) {
-         this->shift = shift = 2;
-         Property** new_map = (Property**)document->allocHashMap(shift);
-         memset(new_map, 0, sizeof(void*)<<shift);
-         new_map[1<<shift] = (Property*)EndOfPtr;
-         this->hashmap = new_map;
-         this->limit = 2<<shift;
-      }
-      else {
-         uint32_t shift = ++this->shift;
-         Property** old_map = this->hashmap;
-         Property** new_map = (Property**)document->allocHashMap(shift);
-         new_map[1<<shift] = (Property*)EndOfPtr;
-         this->hashmap = new_map;
-         this->limit = 2<<shift;
+   __forceinline void init_hashmap(Document* document) {
+      Property** new_map = (Property**)document->allocHashMap(2);
+      new_map[0] = 0;
+      new_map[1] = 0;
+      new_map[2] = 0;
+      new_map[3] = 0;
+      new_map[4] = (Property*)EndOfPtr;
+      this->hashmap = new_map;
+      this->shift = 2;
+      this->limit = 4;
+   }
+   void expand_hashmap(Document* document) {
 
-         uint32_t mask = 1<<(32-shift);
-         while(old_map[0] != EndOfPtr) {
-            Property* cur = old_map[0];
-            if(cur) {
-               if(cur->key->hash & mask) {
-                  new_map[0] = 0;
-                  new_map[1] = cur;
-               }
-               else {
-                  Property* next = cur->next;
-                  new_map[0] = cur;
-                  while(next) {
-                     if(next->key->hash & mask) break;
-                     cur = next;
-                     next = cur->next;
-                  }
-                  new_map[1] = next;
-                  cur->next = 0;
-               }
+      int32_t old_shift = this->shift++;
+      Property** old_map = this->hashmap;
+
+      int32_t new_shift = this->shift;
+      Property** new_map = (Property**)document->allocHashMap(new_shift);
+      this->hashmap = new_map;
+      this->limit = 1<<new_shift;
+
+      uint32_t mask = 1<<(32-shift);
+      while(old_map[0] != EndOfPtr) {
+         Property* cur = old_map[0];
+         if(cur) {
+            if(cur->key->hash & mask) {
+               new_map[0] = 0;
+               new_map[1] = cur;
             }
             else {
-               new_map[0] = 0;
-               new_map[1] = 0;
+               Property* next = cur->next;
+               new_map[0] = cur;
+               while(next) {
+                  if(next->key->hash & mask) break;
+                  cur = next;
+                  next = cur->next;
+               }
+               new_map[1] = next;
+               cur->next = 0;
             }
-            old_map += 1;
-            new_map += 2;
          }
-         new_map[0] = (Property*)EndOfPtr;
-
-         document->freeHashMap((void**)old_map, shift-1);
+         else {
+            new_map[0] = 0;
+            new_map[1] = 0;
+         }
+         old_map += 1;
+         new_map += 2;
       }
+      new_map[0] = (Property*)EndOfPtr;
+
+      document->freeHashMap((void**)old_map, old_shift);
    }
    Property* map(const char* symbol, Document* document) {
       int symbolLen = strlen(symbol);
@@ -187,7 +190,11 @@ struct ObjectMap : Object {
       return this->map(hash_symbol_l(symbol, symbolLen), symbol, symbolLen, document);
    }
    Property* map(uint32_t hash, const char* buffer, int length, Document* document) {
-      if(!this->hashmap) this->expand(document);
+
+      // Init hashmap
+      if(!this->hashmap) {
+         this->init_hashmap(document);
+      }
 
       // Find the insert slot
       uint32_t index = hash>>(32-this->shift);
@@ -209,9 +216,10 @@ struct ObjectMap : Object {
       prop->next = next;
 
       // Resize when hashmap too small
-      if((--this->limit)<0) {
-         this->expand(document);
+      if(this->limit == 0) {
+         this->expand_hashmap(document);
       }
+      this->limit--;
 
       return prop;
    }

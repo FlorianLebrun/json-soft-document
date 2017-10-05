@@ -148,16 +148,17 @@ struct Document : IDocument {
    Document(int pageSize = DefaultPage_size);
    ~Document();
 
-   void* alloc(int size);
-   void free(void* ptr, int size);
-   void** allocHashMap(int shift);
-   void freeHashMap(void** hashmap, int shift);
+   __declspec(noinline) tAllocPage* alloc_page(int size);
+   __forceinline void* alloc(int size);
+   __forceinline void free(void* ptr, int size);
+   __forceinline void** allocHashMap(int shift);
+   __forceinline void freeHashMap(void** hashmap, int shift);
 
-   ObjectMap* createObjectMap();
-   ObjectArray* createObjectArray();
-   ObjectString* createObjectString(const char* str, int len);
-   ObjectSymbol* createObjectSymbol(uint32_t hash, const char* str, int len);
-   ObjectSymbol* createObjectSymbol(const char* str, int len = -1);
+   __forceinline ObjectMap* createObjectMap();
+   __forceinline ObjectArray* createObjectArray();
+   __forceinline ObjectString* createObjectString(const char* str, int len);
+   __forceinline ObjectSymbol* createObjectSymbol(uint32_t hash, const char* str, int len);
+   __forceinline ObjectSymbol* createObjectSymbol(const char* str, int len = -1);
 
 #ifdef SoftDoc_TEMPLATE
    virtual void* allocValue(int head);

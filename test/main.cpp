@@ -54,12 +54,13 @@ typedef std::pair<uint32_t, const char*> t_pair;
 void main() {
    Document doc;
    Chrono c;
-   int count=1000;
+   int count=10000;
 
    struct tSymbol {
       uint32_t hash;
       const char* symbol;
       int length;
+      SoftDoc::ObjectSymbol* key;
    };
    int numProperties = sizeof(propertyNames)/sizeof(char*);
    tSymbol* properties = new tSymbol[numProperties];
@@ -67,13 +68,14 @@ void main() {
       properties[i].hash = hash_symbol(propertyNames[i]);
       properties[i].symbol = propertyNames[i];
       properties[i].length = strlen(propertyNames[i]);
+      properties[i].key = doc.createObjectSymbol(propertyNames[i]);
    }
 
 
    if(1){
       //obj.print();
    }
-   if(0){
+   if(1){
       c.Start();
       for(int k=0;k<count;k++) {
          std::map<uint32_t, const char*, std::less<uint32_t>, StackAllocator<t_pair> > obj;
@@ -84,7 +86,7 @@ void main() {
       }
       printf("std::map               = %5.3g Mops\n", c.GetOpsFloat(count*numProperties, Chrono::Mops));
    }
-   if(0){
+   if(1){
       c.Start();
       for(int k=0;k<count;k++) {
          std::unordered_map<uint32_t, const char*, std::hash<uint32_t>, std::equal_to<uint32_t>, StackAllocator<t_pair> > obj;
@@ -118,6 +120,7 @@ void main() {
          for(int i=0;i<numProperties;i++) {
             tSymbol& s = properties[i];
             Value& y = obj.map(s.hash, s.symbol, s.length, &doc)->value;
+             //Value& y = obj.map2(s.key, &doc)->value;
             y._integer++;
          }
       }

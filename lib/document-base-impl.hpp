@@ -236,13 +236,9 @@ SoftDoc_IMPLi(ValueMetric) Value::getMetric() {
 
 SoftDoc_CTOR() Document::Document(int pageSize) {
    this->pageSize = pageSize;
+   this->page = 0;
    memset(this->hashMapReserve, 0, sizeof(this->hashMapReserve));
-
-   tAllocPage* buf = ((tAllocPage*)malloc(sizeof(tAllocPage)+this->pageSize));
-   buf->next = 0;
-   buf->used = 0;
-   buf->size = pageSize;
-   this->page = buf;
+   this->alloc_page(0);
 }
 SoftDoc_CTOR() Document::~Document() {
    while(this->page) {
@@ -251,16 +247,34 @@ SoftDoc_CTOR() Document::~Document() {
       ::free(buf);
    }
 }
+SoftDoc_IMPLi(Document::tAllocPage*) Document::alloc_page(int size) {
+
+   // When the size is too big, a specific page is create for it
+   if(this->pageSize < (size<<2)) {
+      tAllocPage* buf = ((tAllocPage*)malloc(sizeof(tAllocPage)+size));
+      buf->size = size;
+      buf->used = 0;
+      buf->next = this->page->next;
+      this->page->next = buf;
+   }
+   // Append a new free page
+   else {
+      int buf_size = this->pageSize;
+      tAllocPage* buf = ((tAllocPage*)malloc(sizeof(tAllocPage)+buf_size));
+      memset(buf->buffer, 0, buf_size);
+      buf->size = buf_size;
+      buf->used = 0;
+      buf->next = this->page;
+      this->page = buf;
+      this->pageSize = buf_size+(buf_size>>1); // Grow future page size
+      return buf;
+   }
+}
 SoftDoc_IMPLn(void*) Document::alloc(int size) {
    tAllocPage* buf = this->page;
-   size = align8(size);
+   _ASSERT(size == align8(size));
    if(buf->used+size > buf->size) {
-      int buf_size = std::max(this->page->size, size<<4);
-      buf = ((tAllocPage*)malloc(sizeof(tAllocPage)+buf_size));
-      buf->next = this->page;
-      buf->used = 0;
-      buf->size = buf_size;
-      this->page = buf;
+      buf = this->alloc_page(size);
    }
    _ASSERT(buf->used+size <= buf->size);
    void* ptr = &buf->buffer[buf->used];
@@ -294,7 +308,7 @@ SoftDoc_IMPLi(ObjectArray*) Document::createObjectArray() {
    return obj;
 }
 SoftDoc_IMPLi(ObjectString*) Document::createObjectString(const char* str, int len) {
-   ObjectString* obj = (ObjectString*)this->alloc(sizeof(ObjectString)+len);
+   ObjectString* obj = (ObjectString*)this->alloc(align8(sizeof(ObjectString)+len));
    memcpy(obj->buffer, str, len);
    obj->buffer[len] = 0;
    obj->length = len;
@@ -305,7 +319,7 @@ SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(const char* str, int l
    return this->createObjectSymbol(hash_symbol_l(str, len), str, len);
 }
 SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(uint32_t hash, const char* str, int len) {
-   ObjectSymbol* obj = (ObjectSymbol*)this->alloc(sizeof(ObjectSymbol)+len);
+   ObjectSymbol* obj = (ObjectSymbol*)this->alloc(align8(sizeof(ObjectSymbol)+len));
    memcpy(obj->buffer, str, len);
    obj->buffer[len] = 0;
    obj->hash = hash;
