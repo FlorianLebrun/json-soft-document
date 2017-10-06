@@ -10,6 +10,10 @@ struct Property;
 struct Item;
 struct Value;
 
+template <int x>
+inline static intptr_t alignX(intptr_t offset) {return ((-offset)&(x-1))+offset;}
+inline static intptr_t alignPtr(intptr_t offset) {return ((-offset)&(sizeof(void*)-1))+offset;}
+
 struct Object {
 };
 
@@ -160,16 +164,18 @@ struct Document : IDocument {
    __forceinline ObjectSymbol* createObjectSymbol(uint32_t hash, const char* str, int len);
    __forceinline ObjectSymbol* createObjectSymbol(const char* str, int len = -1);
 
+   __forceinline Property* createProperty(uint32_t hash, const char* str, int len);
+   __forceinline Property* createProperty(ObjectSymbol* symbol);
+   __forceinline Value* createValue();
+   __forceinline Item* createItem();
+
+   void SubstrateValue(Value* dataA, Value* dataB, Value* result);
+
 #ifdef SoftDoc_TEMPLATE
    virtual void* allocValue(int head);
 #else
    void* allocValue(int head);
 #endif
-   Property* createProperty(ObjectSymbol* symbol);
-   Value* createValue();
-   Item* createItem();
-
-   void SubstrateValue(Value* dataA, Value* dataB, Value* result);
 };
 
 #ifdef SoftDoc_TEMPLATE

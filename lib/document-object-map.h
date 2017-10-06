@@ -152,9 +152,8 @@ struct ObjectMap : Object {
       this->limit = 1<<new_shift;
 
       uint32_t mask = 1<<(32-shift);
-      while(old_map[0] != EndOfPtr) {
-         Property* cur = old_map[0];
-         if(cur) {
+      for(Property** cur_map=old_map;cur_map[0] != EndOfPtr;cur_map++) {
+         if(Property* cur = cur_map[0]) {
             if(cur->key->hash & mask) {
                new_map[0] = 0;
                new_map[1] = cur;
@@ -175,7 +174,6 @@ struct ObjectMap : Object {
             new_map[0] = 0;
             new_map[1] = 0;
          }
-         old_map += 1;
          new_map += 2;
       }
       new_map[0] = (Property*)EndOfPtr;
@@ -211,8 +209,7 @@ struct ObjectMap : Object {
       }
 
       // Insert a new property
-      ObjectSymbol* key = document->createObjectSymbol(hash, buffer, length);
-      Property* prop = *pnext = document->createProperty(key);
+      Property* prop = *pnext = document->createProperty(hash, buffer, length);
       prop->next = next;
 
       // Resize when hashmap too small

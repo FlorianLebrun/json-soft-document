@@ -3,6 +3,7 @@ x64
 *.opensdf
 *.suo
 *.sdf
+*.user
 
 # Prerequisites
 *.d

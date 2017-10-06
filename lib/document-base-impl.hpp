@@ -250,7 +250,7 @@ SoftDoc_CTOR() Document::~Document() {
 SoftDoc_IMPLi(Document::tAllocPage*) Document::alloc_page(int size) {
 
    // When the size is too big, a specific page is create for it
-   if(this->pageSize < (size<<2)) {
+   if(this->pageSize < (size<<3)) { // limit internal fragmentation to 12.5%
       tAllocPage* buf = ((tAllocPage*)malloc(sizeof(tAllocPage)+size));
       buf->size = size;
       buf->used = 0;
@@ -266,13 +266,13 @@ SoftDoc_IMPLi(Document::tAllocPage*) Document::alloc_page(int size) {
       buf->used = 0;
       buf->next = this->page;
       this->page = buf;
-      this->pageSize = buf_size+(buf_size>>1); // Grow future page size
+      this->pageSize <<= 1; // Grow future page size
       return buf;
    }
 }
 SoftDoc_IMPLn(void*) Document::alloc(int size) {
    tAllocPage* buf = this->page;
-   _ASSERT(size == align8(size));
+   _ASSERT(size == alignPtr(size));
    if(buf->used+size > buf->size) {
       buf = this->alloc_page(size);
    }
@@ -308,7 +308,7 @@ SoftDoc_IMPLi(ObjectArray*) Document::createObjectArray() {
    return obj;
 }
 SoftDoc_IMPLi(ObjectString*) Document::createObjectString(const char* str, int len) {
-   ObjectString* obj = (ObjectString*)this->alloc(align8(sizeof(ObjectString)+len));
+   ObjectString* obj = (ObjectString*)this->alloc(alignPtr(sizeof(ObjectString)+len));
    memcpy(obj->buffer, str, len);
    obj->buffer[len] = 0;
    obj->length = len;
@@ -319,12 +319,23 @@ SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(const char* str, int l
    return this->createObjectSymbol(hash_symbol_l(str, len), str, len);
 }
 SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(uint32_t hash, const char* str, int len) {
-   ObjectSymbol* obj = (ObjectSymbol*)this->alloc(align8(sizeof(ObjectSymbol)+len));
+   ObjectSymbol* obj = (ObjectSymbol*)this->alloc(alignPtr(sizeof(ObjectSymbol)+len));
    memcpy(obj->buffer, str, len);
    obj->buffer[len] = 0;
    obj->hash = hash;
    obj->length = len;
    return obj;
+}
+SoftDoc_IMPLi(Property*) Document::createProperty(uint32_t hash, const char* str, int len) {
+   int symbol_size = alignPtr(sizeof(ObjectSymbol)+len);
+   char* buffer = (char*)this->allocValue(symbol_size+sizeof(Property)-sizeof(Value));
+   Property* prop = (Property*)&buffer[symbol_size];
+   ObjectSymbol* key = prop->key = (ObjectSymbol*)&buffer[0];
+   memcpy(key->buffer, str, len);
+   key->buffer[len] = 0;
+   key->hash = hash;
+   key->length = len;
+   return prop;
 }
 SoftDoc_IMPLi(Property*) Document::createProperty(ObjectSymbol* key) {
    Property* prop = (Property*)this->allocValue(sizeof(Property)-sizeof(Value));

@@ -144,12 +144,3 @@ uint32_t jenkins(const uint8_t* key, size_t length) {
    hash += hash << 15;
    return hash;
 }
-
-int32_t compare_symbol(
-   const char* buffer1, int32_t length1,
-   const char* buffer2, int32_t length2)
-{
-   int32_t c = length1-length2;
-   if(c) return c;
-   return strncmp(buffer1, buffer2, length1);
-}
