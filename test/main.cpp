@@ -100,6 +100,56 @@ void main() {
    if(1){
       c.Start();
       for(int k=0;k<count;k++) {
+         for(int i=0;i<numProperties;i++) {
+            tSymbol& s = properties[i];
+            doc.alloc(s.length);
+         }
+      }
+      printf("alloc                  = %5.3g Mops\n", c.GetOpsFloat(count*numProperties, Chrono::Mops));
+   }
+   if(1){
+      c.Start();
+      for(int k=0;k<count;k++) {
+         for(int i=0;i<numProperties;i++) {
+            tSymbol& s = properties[i];
+            doc.allocValue(s.length);
+         }
+      }
+      printf("allocValue             = %5.3g Mops\n", c.GetOpsFloat(count*numProperties, Chrono::Mops));
+   }
+   if(1){
+      c.Start();
+      for(int k=0;k<count;k++) {
+         for(int i=0;i<numProperties;i++) {
+            tSymbol& s = properties[i];
+            doc.createObjectSymbol(s.hash, s.symbol, s.length);
+         }
+      }
+      printf("createSymbol           = %5.3g Mops\n", c.GetOpsFloat(count*numProperties, Chrono::Mops));
+   }
+   if(1){
+      c.Start();
+      for(int k=0;k<count;k++) {
+         for(int i=0;i<numProperties;i++) {
+            tSymbol& s = properties[i];
+            doc.createProperty(s.key);
+         }
+      }
+      printf("createProperty (+key)  = %5.3g Mops\n", c.GetOpsFloat(count*numProperties, Chrono::Mops));
+   }
+   if(1){
+      c.Start();
+      for(int k=0;k<count;k++) {
+         for(int i=0;i<numProperties;i++) {
+            tSymbol& s = properties[i];
+            doc.createProperty(s.hash, s.symbol, s.length);
+         }
+      }
+      printf("createProperty         = %5.3g Mops\n", c.GetOpsFloat(count*numProperties, Chrono::Mops));
+   }
+   if(1){
+      c.Start();
+      for(int k=0;k<count;k++) {
          ObjectMap obj;
          for(int i=0;i<numProperties;i++) {
             tSymbol& s = properties[i];
@@ -126,7 +176,7 @@ void main() {
       }
       printf("get                    = %5.3g Mops\n", c.GetOpsFloat(count*numProperties, Chrono::Mops));
    }
-   if(1){
+   if(0){
       const char* json_test = "{\"someArray\":[\"foo\",\"bar\",123],\"someObject\":{\"foo\":\"bar\",\"embedded\":{\"eleet\":1337}},\"someString\":\"Hithere!\",\"someNumber\":123,\"someBoolean\":true}";
       Value y(&doc);
       c.Start();
@@ -135,7 +185,7 @@ void main() {
       }
       printf("JSON::parse            = %5.3g Mops\n", c.GetOpsFloat(count, Chrono::Mops));
    }
-   if(1){
+   if(0){
       Value x(&doc);
       x["a"] = 5;
       x["b"] = 5.6f;

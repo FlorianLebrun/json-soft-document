@@ -31,7 +31,7 @@ struct ObjectMap : Object {
       this->classname = 0;
       this->hashmap = 0;
       this->shift = 0;
-      this->limit = 0;
+      this->limit = -1;
    }
    bool isEmpty() {
       if(Property** hashmap=this->hashmap) {
@@ -149,7 +149,7 @@ struct ObjectMap : Object {
       int32_t new_shift = this->shift;
       Property** new_map = (Property**)document->allocHashMap(new_shift);
       this->hashmap = new_map;
-      this->limit = 1<<new_shift;
+      this->limit += 1<<new_shift;
 
       uint32_t mask = 1<<(32-shift);
       for(Property** cur_map=old_map;cur_map[0] != EndOfPtr;cur_map++) {
@@ -189,9 +189,10 @@ struct ObjectMap : Object {
    }
    Property* map(uint32_t hash, const char* buffer, int length, Document* document) {
 
-      // Init hashmap
-      if(!this->hashmap) {
-         this->init_hashmap(document);
+      // Resize when hashmap too small
+      if(this->limit <= 0) {
+         if(!this->hashmap) this->init_hashmap(document);
+         else this->expand_hashmap(document);
       }
 
       // Find the insert slot
@@ -209,13 +210,9 @@ struct ObjectMap : Object {
       }
 
       // Insert a new property
-      Property* prop = *pnext = document->createProperty(hash, buffer, length);
-      prop->next = next;
+      Property* prop = *pnext = document->createProperty(hash, buffer, length);prop->next = next;
+      //static Property* prop = 0;if(!prop) prop = document->createProperty(hash, buffer, length);
 
-      // Resize when hashmap too small
-      if(this->limit == 0) {
-         this->expand_hashmap(document);
-      }
       this->limit--;
 
       return prop;
