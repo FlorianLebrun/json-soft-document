@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="document-base-impl.hpp" />
     <ClInclude Include="document-base.hpp" />
+    <ClInclude Include="document-encoding.hpp" />
     <ClInclude Include="document-json-helper.hpp" />
     <ClInclude Include="document-object-array.h" />
     <ClInclude Include="document-object-expression.h" />

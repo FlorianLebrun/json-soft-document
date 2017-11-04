@@ -51,6 +51,7 @@ typedef std::pair<uint32_t, const char*> t_pair;
 
 #include "stl_alloc.h"
 
+
 void main() {
    Document doc;
    Chrono c;
@@ -65,7 +66,7 @@ void main() {
    int numProperties = sizeof(propertyNames)/sizeof(char*);
    tSymbol* properties = new tSymbol[numProperties];
    for(int i=0;i<numProperties;i++) {
-      properties[i].hash = hash_symbol(propertyNames[i]);
+      properties[i].hash = SoftDocX::hash_case_sensitive(propertyNames[i], strlen(propertyNames[i]));
       properties[i].symbol = propertyNames[i];
       properties[i].length = strlen(propertyNames[i]);
       properties[i].key = doc.createObjectSymbol(propertyNames[i]);
@@ -185,21 +186,23 @@ void main() {
       }
       printf("JSON::parse            = %5.3g Mops\n", c.GetOpsFloat(count, Chrono::Mops));
    }
-   if(0){
+   if(1){
       Value x(&doc);
       x["a"] = 5;
       x["b"] = 5.6f;
-      x["c"]["hello"] = 9;
-      x["d"].push_back() = "x";
+      x["c"]["héllo"] = 9;
+      x["d"].push_back() = "x\nr";
       x["d"].push_back() = "y";
       x["d"].push_back() = "z";
       printf("stringify x: %s\n", JSON::stringify(x).c_str());
       Value y(&doc);
       std::string sx = JSON::stringify(x);
-      JSON::parse(y, "{\"d\":[\"x\",\"y\",\"z\",30],\"a\":5,\"b\":5.6,\"c\":{\"__classname\":\"MyClass\",\"hello\":9,}}");
+
+      const char* y_txt = "{\"d\":[\"x\\\"\",\"y\",\"z\",30],\"a\":5,\"b\":5.6,\"c\":{\"__classname\":\"MyClass\",\"hello\":9,}}";
+      JSON::parse(y, y_txt);
       //JSON::parse(y, sx.c_str(), sx.size());
       y["d"].push_back() = 30;
-      printf("stringify y: %s\n", JSON::stringify(y).c_str());
+      printf("stringify y: %s <-- %s\n", JSON::stringify(y).c_str(), y_txt);
 
       Value z(&doc);
       z.subtract(&x, &y);

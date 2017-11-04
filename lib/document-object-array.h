@@ -92,7 +92,7 @@ struct ObjectArray : Object {
          if(itemX && itemY) {
             itemX = itemX->next;
             itemY = itemY->next;
-            do {
+            while(itemX && itemY) {
                Item* item = obj->push_back(document);
                item->value.subtract(&itemX->value, &itemY->value);
                if(item->value.typeID == TypeID::Undefined) {
@@ -100,7 +100,7 @@ struct ObjectArray : Object {
                }
                itemX = itemX->next;
                itemY = itemY->next;
-            } while(itemX && itemY);
+            }
          }
 
          // Fill with minimized elements

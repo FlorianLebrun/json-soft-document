@@ -1,7 +1,6 @@
 
 struct ObjectString : Object {
    uint32_t length;
-   uint8_t charset;
    char buffer[1];
 
    bool equals(ObjectString* other) {
@@ -17,7 +16,6 @@ struct ObjectString : Object {
 struct ObjectSymbol : Object {
    uint32_t hash;
    uint32_t length;
-   uint8_t charset;
    char buffer[1];
 
    // Symbol is a string with: mandatory hash + customizable case sensitivity

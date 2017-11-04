@@ -35,6 +35,7 @@ struct SoftDoc {
       Null,
    };
 
+#  include "document-encoding.hpp"
 #  include "document-base.hpp"
 #  include "document-object-strings.h"
 #  include "document-object-array.h"

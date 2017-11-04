@@ -48,7 +48,7 @@ SoftDoc_IMPLn(void) Value::set(const char* x, int len) {
 SoftDoc_IMPLn(void) Value::set_symbol(const char* x, int len) {
    if(len<0) len = strlen(x);
    this->typeID = TypeID::Symbol;
-   this->_object = (Object*)document->createObjectSymbol(hash_symbol_l(x, len), x, len);
+   this->_object = (Object*)document->createObjectSymbol(hash_case_insensitive(x, len), x, len);
 }
 SoftDoc_IMPLn(void) Value::set(Value* x) {
    this->typeID = x->typeID;
@@ -61,6 +61,13 @@ SoftDoc_IMPLi(ObjectSymbol*) Value::className() {
    return 0;
 }
 SoftDoc_IMPLi(Value&) Value::map(const char* key) {
+   if(this->typeID != TypeID::Map) {
+      this->typeID = TypeID::Map;
+      this->_map = this->document->createObjectMap();
+   }
+   return this->_map->map(key, this->document)->value;
+}
+SoftDoc_IMPLi(Value&) Value::map(ObjectSymbol* key) {
    if(this->typeID != TypeID::Map) {
       this->typeID = TypeID::Map;
       this->_map = this->document->createObjectMap();
@@ -232,22 +239,19 @@ SoftDoc_IMPLi(ValueMetric) Value::getMetric() {
 
 
 
-
-
-SoftDoc_CTOR() Document::Document(int pageSize) {
+SoftDoc_CTOR() Allocator::Allocator(int pageSize) {
    this->pageSize = pageSize;
    this->page = 0;
-   memset(this->hashMapReserve, 0, sizeof(this->hashMapReserve));
    this->alloc_page(0);
 }
-SoftDoc_CTOR() Document::~Document() {
+SoftDoc_CTOR() Allocator::~Allocator() {
    while(this->page) {
       tAllocPage* buf = this->page;
       this->page = buf->next;
       ::free(buf);
    }
 }
-SoftDoc_IMPLi(Document::tAllocPage*) Document::alloc_page(int size) {
+SoftDoc_IMPLi(Allocator::tAllocPage*) Allocator::alloc_page(int size) {
 
    // When the size is too big, a specific page is create for it
    if(this->pageSize < (size<<3)) { // limit internal fragmentation to 12.5%
@@ -256,6 +260,7 @@ SoftDoc_IMPLi(Document::tAllocPage*) Document::alloc_page(int size) {
       buf->used = 0;
       buf->next = this->page->next;
       this->page->next = buf;
+      return buf;
    }
    // Append a new free page
    else {
@@ -270,9 +275,9 @@ SoftDoc_IMPLi(Document::tAllocPage*) Document::alloc_page(int size) {
       return buf;
    }
 }
-SoftDoc_IMPLn(void*) Document::alloc(int size) {
+SoftDoc_IMPLn(void*) Allocator::alloc(int size) {
    tAllocPage* buf = this->page;
-   _ASSERT(size == alignPtr(size));
+   size = alignPtr(size);
    if(buf->used+size > buf->size) {
       buf = this->alloc_page(size);
    }
@@ -281,8 +286,15 @@ SoftDoc_IMPLn(void*) Document::alloc(int size) {
    buf->used += size;
    return ptr;
 }
-SoftDoc_IMPLn(void) Document::free(void* ptr, int size) {
+SoftDoc_IMPLn(void) Allocator::free(void* ptr, int size) {
    //::free(ptr);
+}
+
+
+
+SoftDoc_CTOR() Document::Document(tCharsetType charset, int pageSize) : Allocator(pageSize) {
+   this->charset = charset;
+   memset(this->hashMapReserve, 0, sizeof(this->hashMapReserve));
 }
 SoftDoc_IMPLn(void**) Document::allocHashMap(int shift) {
    void** hashmap;
@@ -308,7 +320,7 @@ SoftDoc_IMPLi(ObjectArray*) Document::createObjectArray() {
    return obj;
 }
 SoftDoc_IMPLi(ObjectString*) Document::createObjectString(const char* str, int len) {
-   ObjectString* obj = (ObjectString*)this->alloc(alignPtr(sizeof(ObjectString)+len));
+   ObjectString* obj = (ObjectString*)this->alloc(sizeof(ObjectString)+len);
    memcpy(obj->buffer, str, len);
    obj->buffer[len] = 0;
    obj->length = len;
@@ -316,10 +328,10 @@ SoftDoc_IMPLi(ObjectString*) Document::createObjectString(const char* str, int l
 }
 SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(const char* str, int len) {
    if(len < 0) len = strlen(str);
-   return this->createObjectSymbol(hash_symbol_l(str, len), str, len);
+   return this->createObjectSymbol(hash_case_insensitive(str, len), str, len);
 }
 SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(uint32_t hash, const char* str, int len) {
-   ObjectSymbol* obj = (ObjectSymbol*)this->alloc(alignPtr(sizeof(ObjectSymbol)+len));
+   ObjectSymbol* obj = (ObjectSymbol*)this->alloc(sizeof(ObjectSymbol)+len);
    memcpy(obj->buffer, str, len);
    obj->buffer[len] = 0;
    obj->hash = hash;

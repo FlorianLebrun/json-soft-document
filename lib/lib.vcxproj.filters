@@ -10,6 +10,7 @@
     <ClInclude Include="document-object-map.h" />
     <ClInclude Include="document-object-strings.h" />
     <ClInclude Include="document-utils.h" />
+    <ClInclude Include="document-encoding.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="document-utils.cpp" />

@@ -10,9 +10,28 @@ struct Property;
 struct Item;
 struct Value;
 
+enum tCharsetType {
+   ASCII_charset,
+   UTF8_charset,
+};
+
 template <int x>
-inline static intptr_t alignX(intptr_t offset) {return ((-offset)&(x-1))+offset;}
-inline static intptr_t alignPtr(intptr_t offset) {return ((-offset)&(sizeof(void*)-1))+offset;}
+inline static intptr_t alignX(intptr_t offset) {
+   return ((-offset)&(x-1))+offset;
+}
+inline static intptr_t alignPtr(intptr_t offset) {
+   return ((-offset)&(sizeof(void*)-1))+offset;
+}
+inline static uint32_t hash_case_insensitive(const char* symbol, int len) {
+   //return utf8_crc32(0, symbol, len);
+   return softdoc_hash_murmur3_32((uint8_t*)symbol, len, 0);
+   //return jenkins((uint8_t*)symbol, len);
+}
+inline static uint32_t hash_case_sensitive(const char* symbol, int len) {
+   //return utf8_crc32(0, symbol, len);
+   return softdoc_hash_murmur3_32((uint8_t*)symbol, len, 0);
+   //return jenkins((uint8_t*)symbol, len);
+}
 
 struct Object {
 };
@@ -51,6 +70,7 @@ struct Value : IValue {
 
    ObjectSymbol* className();
 
+   Value& map(ObjectSymbol* key);
    Value& map(const char* key);
    Value* find(const char* key);
 
@@ -76,9 +96,10 @@ struct Value : IValue {
    float operator = (double x) {this->set(double(x));return x;}
    char* operator = (char* x) {this->set(x);return x;}
    const char* operator = (const char* x) {this->set(x);return x;}
+   const std::string& operator = (const std::string& x) {this->set(x.c_str());return x;}
    Value& operator = (Value& x) {this->set(&x);return x;}
    Value& operator [] (const char* x) {return this->map(x);}
-   Value& operator [] (std::string x) {return this->map(x.c_str());}
+   Value& operator [] (const std::string& x) {return this->map(x.c_str());}
    Value& operator [] (intptr_t x) {return this->get(x);}
 
    ValueMetric getMetric();
@@ -136,8 +157,14 @@ struct map_iterator : ObjectMap::iterator {
    }
 };
 
-struct Document : IDocument {
+struct Allocator {
+public:
+   Allocator(int pageSize = DefaultPage_size);
+   ~Allocator();
+   __forceinline void* alloc(int size);
+   __forceinline void free(void* ptr, int size);
 
+private:
    struct tAllocPage {
       tAllocPage* next;
       int used;
@@ -147,14 +174,17 @@ struct Document : IDocument {
 
    tAllocPage* page;
    int pageSize;
-   void** hashMapReserve[24];
-
-   Document(int pageSize = DefaultPage_size);
-   ~Document();
 
    __declspec(noinline) tAllocPage* alloc_page(int size);
-   __forceinline void* alloc(int size);
-   __forceinline void free(void* ptr, int size);
+};
+
+struct Document : IDocument, Allocator {
+
+   tCharsetType charset;
+   void** hashMapReserve[24];
+
+   Document(tCharsetType charset = ASCII_charset, int pageSize = DefaultPage_size);
+
    __forceinline void** allocHashMap(int shift);
    __forceinline void freeHashMap(void** hashmap, int shift);
 
@@ -168,8 +198,6 @@ struct Document : IDocument {
    __forceinline Property* createProperty(ObjectSymbol* symbol);
    __forceinline Value* createValue();
    __forceinline Item* createItem();
-
-   void SubstrateValue(Value* dataA, Value* dataB, Value* result);
 
 #ifdef SoftDoc_TEMPLATE
    virtual void* allocValue(int head);

@@ -94,6 +94,7 @@ public:
       char_def['"'] |= chr_SPECIAL;
       char_def[','] |= chr_SPECIAL;
       char_def[':'] |= chr_SPECIAL;
+      char_def['#'] |= chr_SPECIAL;
 
       char_def['\r'] |= chr_INVISIBLE;
       char_def['\n'] |= chr_INVISIBLE;
@@ -114,9 +115,10 @@ public:
       return -1;
    }
 
-   void refactorJsonString(ObjectString* obj) {
-      char* dst = obj->buffer;
-      for(char* src = obj->buffer;*src;src++) {
+   int copyString(char* buffer, tString& _string) {
+      char* dst = buffer;
+      const char* src_end = _string.ptr+_string.len;
+      for(const char* src = _string.ptr;src<src_end;src++) {
          if(*src == '\\') {
             src++;
             switch(*src) {
@@ -142,7 +144,20 @@ public:
          }
       }
       *dst = '\0';
-      obj->length = dst-obj->buffer;
+      return dst-buffer;
+   }
+   ObjectString* createString(tString& _string) {
+      ObjectString* obj = (ObjectString*)document->alloc(sizeof(ObjectString)+_string.len);
+      obj->length = this->copyString(obj->buffer, _string);
+      obj->buffer[obj->length] = 0;
+      return obj;
+   }
+   ObjectSymbol* createSymbol(tString& _string) {
+      ObjectSymbol* obj = (ObjectSymbol*)document->alloc(sizeof(ObjectSymbol)+_string.len);
+      obj->length = this->copyString(obj->buffer, _string);
+      obj->buffer[obj->length] = 0;
+      obj->hash = hash_case_sensitive(obj->buffer, obj->length);
+      return obj;
    }
 
    void peekString(char endchar) {
@@ -162,8 +177,7 @@ public:
       token._string.len = cursor - start;
       if (cursor < bufferSize) cursor++;
    }
-
-   void peekName() {
+   void peekSymbol() {
       int start = cursor;
       while (cursor < bufferSize) {
          char c = buffer[cursor];
@@ -187,6 +201,17 @@ public:
       } 
       else if (token._string.equals("null")) {
          token.id = tToken::NUL;
+      }
+   }
+   void peekTaggedSymbol() {
+      char c = buffer[cursor];
+      if(c=='\'' || c == '"') {
+         cursor++;
+         peekString(c);
+         token._string.symbolic = true;
+      }
+      else {
+         return peekSymbol();
       }
    }
 
@@ -260,12 +285,14 @@ public:
          }
          // Parse a name
          else if ((cdef & chr_NAME) != 0) {
-            return peekName();
+            return peekSymbol();
          }
          // Parse a keychar
          else if (cdef == chr_SPECIAL) {
             cursor++;
             switch (c) {
+            case '#':
+               return peekTaggedSymbol();
             case '"':
             case '\'':
                return peekString(c);
@@ -345,7 +372,7 @@ public:
 
             if(token.id == tToken::STRING) {
                if(!obj->classname) {
-                  obj->classname = document->createObjectSymbol(token._string.ptr, token._string.len);
+                  obj->classname = this->createSymbol(token._string);
                } else {
                   logError("classname cannot be defined twice");
                }
@@ -407,7 +434,7 @@ public:
    void peekObjectArray(Value* value) {
       ObjectArray* obj = document->createObjectArray();
       value->typeID = TypeID::Array;
-      value->_object = obj;
+      value->_array = obj;
 
       // Parse array values
       if (token.id == tToken::BEGIN_ARRAY) {
@@ -436,7 +463,7 @@ public:
    void peekObjectExpression(Value* value, ObjectSymbol* symbol) {
       ObjectArray* obj = document->createObjectArray();
       value->typeID = TypeID::Array;
-      value->_object = obj;
+      value->_array = obj;
 
       // Parse array values
       if (token.id == tToken::BEGIN_XPR) {
@@ -468,18 +495,18 @@ public:
             tString _string = token._string;
             peekToken();
             if (token.id == tToken::BEGIN_XPR) {
-               peekObjectExpression(value, document->createObjectSymbol(_string.ptr, _string.len));
+               peekObjectExpression(value, this->createSymbol(_string));
             }
             else if (token.id == tToken::BEGIN_OBJECT) {
-               peekObjectMap(value, document->createObjectSymbol(_string.ptr, _string.len));
+               peekObjectMap(value, this->createSymbol(_string));
             }
             else if(_string.symbolic) {
                value->typeID = TypeID::Symbol;
-               value->_object = document->createObjectSymbol(_string.ptr, _string.len);
+               value->_object = this->createSymbol(_string);
             }
             else {
                value->typeID = TypeID::String;
-               value->_object = document->createObjectString(_string.ptr, _string.len);
+               value->_object = this->createString(_string);
             }
          }break;
          // Parse Number
@@ -522,21 +549,33 @@ public:
    }
 };
 
+template <bool extended_json>
 struct JsonDocumentWriter {
    std::stringstream out;
+
    void stringifyMap(ObjectMap* obj) {
       ObjectMap::iterator it(obj);
       int first = 1;
       if(obj->classname) {
-         out<<'"'<<obj->classname->buffer<<'"';
+         if(extended_json) {
+            stringifySymbol(obj->classname);
+            out<<'{';
+         }
+         else {
+            out<<"{\"className\":";
+            stringifySymbol(obj->classname);
+            first = 0;
+         }
       }
-      out<<"{";
+      else out<<'{';
       for(Property* prop=it.begin();prop;prop=it.next()) {
-         if(!first) out<<",";
-         else first = 0;
-         out<<'"'<<prop->key->buffer<<'"';
-         out<<':';
-         stringify(prop->value);
+         if(prop->value.typeID != TypeID::Undefined) {
+            if(!first) out<<",";
+            else first = 0;
+            out<<'"'<<prop->key->buffer<<'"';
+            out<<':';
+            stringify(prop->value);
+         }
          prop = prop->next;
       }
       out<<"}";
@@ -551,11 +590,33 @@ struct JsonDocumentWriter {
       }
       out<<"]";
    }
+   void writeString(const char* buffer, int size) {
+      for(int i=0;i<size;i++) {
+         char c = buffer[i];
+         if(c <= '\\') {
+            switch(c) {
+            case '\b':out<<'\\';c='b';break;// \b  Backspace (ascii code 08)
+            case '\f':out<<'\\';c='f';break;// \f  Form feed (ascii code 0C)
+            case '\n':out<<'\\';c='n';break;// \n  New line
+            case '\r':out<<'\\';c='r';break;// \r  Carriage return
+            case '\t':out<<'\\';c='t';break;// \t  Tab
+            case '\"':out<<'\\';c='\"';break;// \"  Double quote
+            case '\\':out<<'\\';c='\\';break;// \\  Backslash character
+            }
+         }
+         out<<c;
+      }
+   }
    void stringifyString(ObjectString* obj) {
-      out<<'"'<<obj->buffer<<'"';
+      out<<'"';
+      writeString(obj->buffer, obj->length);
+      out<<'"';
    }
    void stringifySymbol(ObjectSymbol* obj) {
-      out<<obj->buffer;
+      if(extended_json) out<<'#';
+      out<<'"';
+      writeString(obj->buffer, obj->length);
+      out<<'"';
    }
    void stringify(Value& x) {
       switch(x.typeID) {
@@ -594,7 +655,26 @@ struct JSON {
       reader.peekValue(&value);
    }
    static std::string stringify(Value &x) {
-      JsonDocumentWriter writer;
+      JsonDocumentWriter<false> writer;
+      writer.stringify(x);
+
+      std::string out = writer.out.str();
+      char* buffer = (char*)::malloc((out.size()+1)*2);
+      EncodingBuffer src((char*)out.c_str(), out.size());
+      EncodingBuffer dst(buffer, (out.size()+1)*2);
+      if(Ascii_to_Utf8(src, dst)) {
+         throw std::exception("encoding overflow");
+      }
+      dst.start[0] = 0;
+      out = buffer;
+      ::free(buffer);
+      return out;
+   }
+};
+
+struct JSONExtended : JSON {
+   static std::string stringify(Value &x) {
+      JsonDocumentWriter<true> writer;
       writer.stringify(x);
       return writer.out.str();
    }

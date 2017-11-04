@@ -182,10 +182,10 @@ struct ObjectMap : Object {
    }
    Property* map(const char* symbol, Document* document) {
       int symbolLen = strlen(symbol);
-      return this->map(hash_symbol_l(symbol, symbolLen), symbol, symbolLen, document);
+      return this->map(hash_case_insensitive(symbol, symbolLen), symbol, symbolLen, document);
    }
    Property* map(const char* symbol, int symbolLen, Document* document) {
-      return this->map(hash_symbol_l(symbol, symbolLen), symbol, symbolLen, document);
+      return this->map(hash_case_insensitive(symbol, symbolLen), symbol, symbolLen, document);
    }
    Property* map(uint32_t hash, const char* buffer, int length, Document* document) {
 
@@ -214,7 +214,34 @@ struct ObjectMap : Object {
       //static Property* prop = 0;if(!prop) prop = document->createProperty(hash, buffer, length);
 
       this->limit--;
+      return prop;
+   }
+   Property* map(ObjectSymbol* key, Document* document) {
 
+      // Resize when hashmap too small
+      if(this->limit <= 0) {
+         if(!this->hashmap) this->init_hashmap(document);
+         else this->expand_hashmap(document);
+      }
+
+      // Find the insert slot
+      uint32_t index = key->hash>>(32-this->shift);
+      Property** pnext = &this->hashmap[index];
+      Property* next = *pnext;
+      while(next) {
+         int c = next->key->compare(key);
+         if(c >= 0) {
+            if(!c) return next;
+            else break;
+         }
+         pnext = &next->next;
+         next = *pnext;
+      }
+
+      // Insert a new property
+      Property* prop = *pnext = document->createProperty(key);
+      prop->next = next;
+      this->limit--;
       return prop;
    }
    void print() {

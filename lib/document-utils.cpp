@@ -37,7 +37,7 @@ static const uint32_t crc32Table[256] = {
    0x79B737BA,0x8BDCB4B9,0x988C474D,0x6AE7C44E,0xBE2DA0A5,0x4C4623A6,0x5F16D052,0xAD7D5351,
 };
 
-uint32_t utf8_crc32(uint32_t crc, const void *buf, size_t size)
+uint32_t softfoc_hash_utf8_crc32(uint32_t crc, const void *buf, size_t size)
 {
    const uint8_t *p = (const uint8_t*)buf;
    while (size--) {
@@ -83,7 +83,7 @@ static const uint32_t icrc32Table[256] = {
    0x79B737BA,0x8BDCB4B9,0x988C474D,0x6AE7C44E,0xBE2DA0A5,0x4C4623A6,0x5F16D052,0xAD7D5351,
 };
 
-uint32_t utf8_icrc32(uint32_t crc, const void *buf, size_t size)
+uint32_t softdoc_hash_utf8_icrc32(uint32_t crc, const void *buf, size_t size)
 {
    const uint8_t *p = (const uint8_t*)buf;
    while (size--) {
@@ -93,7 +93,7 @@ uint32_t utf8_icrc32(uint32_t crc, const void *buf, size_t size)
    return crc;
 }
 
-uint32_t murmur3_32(const uint8_t* key, size_t len, uint32_t seed) {
+uint32_t softdoc_hash_murmur3_32(const uint8_t* key, size_t len, uint32_t seed) {
    uint32_t h = seed;
    if (len > 3) {
       const uint32_t* key_x4 = (const uint32_t*) key;
@@ -131,7 +131,7 @@ uint32_t murmur3_32(const uint8_t* key, size_t len, uint32_t seed) {
    return h;
 }
 
-uint32_t jenkins(const uint8_t* key, size_t length) {
+uint32_t softdoc_hash_jenkins(const uint8_t* key, size_t length) {
    size_t i = 0;
    uint32_t hash = 0;
    while (i != length) {
