@@ -1,6 +1,6 @@
 
 //#define SoftDoc_TEMPLATE
-#include "Document.h"
+#include <json-soft-document>
 
 #include <stdio.h>
 #include <map>
