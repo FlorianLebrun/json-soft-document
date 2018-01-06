@@ -10,29 +10,6 @@ struct Property;
 struct Item;
 struct Value;
 
-enum tCharsetType {
-   ASCII_charset,
-   UTF8_charset,
-};
-
-template <int x>
-inline static intptr_t alignX(intptr_t offset) {
-   return ((-offset)&(x-1))+offset;
-}
-inline static intptr_t alignPtr(intptr_t offset) {
-   return ((-offset)&(sizeof(void*)-1))+offset;
-}
-inline static uint32_t hash_case_insensitive(const char* symbol, int len) {
-   //return utf8_crc32(0, symbol, len);
-   return softdoc_hash_murmur3_32((uint8_t*)symbol, len, 0);
-   //return jenkins((uint8_t*)symbol, len);
-}
-inline static uint32_t hash_case_sensitive(const char* symbol, int len) {
-   //return utf8_crc32(0, symbol, len);
-   return softdoc_hash_murmur3_32((uint8_t*)symbol, len, 0);
-   //return jenkins((uint8_t*)symbol, len);
-}
-
 struct Object {
 };
 
@@ -67,6 +44,7 @@ struct Value : IValue {
    void set(const char* x, int len = -1);
    void set(Value* x);
    void set_symbol(const char* x, int len = -1);
+   void set_map(const char* classname, int len = -1);
 
    ObjectSymbol* className();
 
@@ -83,6 +61,25 @@ struct Value : IValue {
    void copyMinimize(Value* src) ;
    void duplicate(Value* src);
    void subtract(Value* valueA, Value* valueB);
+
+   bool toBoolean(bool defaultValue = false) const;
+   int64_t toInteger(int64_t defaultValue = 0) const;
+   double toNumber(double defaultValue = 0) const;
+   std::string toString(const char* defaultValue = "") const;
+
+   operator bool() const { return this->toBoolean(); }
+   operator int8_t() const { return this->toInteger(); }
+   operator int16_t() const { return this->toInteger(); }
+   operator int32_t() const { return this->toInteger(); }
+   operator int64_t() const { return this->toInteger(); }
+   operator uint8_t() const { return this->toInteger(); }
+   operator uint16_t() const { return this->toInteger(); }
+   operator uint32_t() const { return this->toInteger(); }
+   operator uint64_t() const { return this->toInteger(); }
+   operator float() const { return this->toNumber(); }
+   operator double() const { return this->toNumber(); }
+   operator const char*() const { return this->toString().c_str(); }
+   operator std::string() const { return this->toString().c_str(); }
 
    int operator = (int8_t x) {this->set(int64_t(x));return x;}
    int operator = (int16_t x) {this->set(int64_t(x));return x;}
@@ -192,12 +189,15 @@ struct Document : IDocument, Allocator {
    __forceinline ObjectArray* createObjectArray();
    __forceinline ObjectString* createObjectString(const char* str, int len);
    __forceinline ObjectSymbol* createObjectSymbol(uint32_t hash, const char* str, int len);
-   __forceinline ObjectSymbol* createObjectSymbol(const char* str, int len = -1);
+   __forceinline ObjectSymbol* createObjectSymbol(const char* str, int len);
+   __forceinline ObjectSymbol* createObjectSymbol(const char* str);
 
    __forceinline Property* createProperty(uint32_t hash, const char* str, int len);
    __forceinline Property* createProperty(ObjectSymbol* symbol);
    __forceinline Value* createValue();
    __forceinline Item* createItem();
+
+   __forceinline static uint32_t hash_symbol(const char* str, int len);
 
 #ifdef SoftDoc_TEMPLATE
    virtual void* allocValue(int head);

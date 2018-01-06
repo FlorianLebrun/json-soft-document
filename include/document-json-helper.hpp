@@ -5,8 +5,8 @@ public:
       bool symbolic;
       const char*ptr; 
       int len;
-      inline bool equals(const char* str, bool isCaseSensitive = false) {
-         return !(isCaseSensitive?strncmp(ptr, str, len):strnicmp(ptr, str, len));
+      inline bool equals(const char* str) {
+         return !strncmp(ptr, str, len);
       }
    };
    struct tToken {
@@ -81,7 +81,6 @@ public:
       char_def['!'] |= chr_NAME;
       char_def['@'] |= chr_NAME;
       char_def['$'] |= chr_NAME;
-      char_def['#'] |= chr_NAME;
 
       char_def['{'] |= chr_SPECIAL;
       char_def['}'] |= chr_SPECIAL;
@@ -156,7 +155,7 @@ public:
       ObjectSymbol* obj = (ObjectSymbol*)document->alloc(sizeof(ObjectSymbol)+_string.len);
       obj->length = this->copyString(obj->buffer, _string);
       obj->buffer[obj->length] = 0;
-      obj->hash = hash_case_sensitive(obj->buffer, obj->length);
+      obj->hash = document->hash_symbol(obj->buffer, obj->length);
       return obj;
    }
 
@@ -646,19 +645,8 @@ struct JsonDocumentWriter {
          return this->stringifySymbol(x._symbol);
       }
    }
-};
-
-struct JSON {
-   static void parse(Value& value, const char* buffer, int length = 0) {
-      JsonDocumentReader reader(buffer, length?length:strlen(buffer), value.document);
-      reader.peekToken();
-      reader.peekValue(&value);
-   }
-   static std::string stringify(Value &x) {
-      JsonDocumentWriter<false> writer;
-      writer.stringify(x);
-
-      std::string out = writer.out.str();
+   std::string flush() {
+      std::string out = this->out.str();
       char* buffer = (char*)::malloc((out.size()+1)*2);
       EncodingBuffer src((char*)out.c_str(), out.size());
       EncodingBuffer dst(buffer, (out.size()+1)*2);
@@ -672,10 +660,20 @@ struct JSON {
    }
 };
 
-struct JSONExtended : JSON {
+struct JSON {
+   static void parse(Value& value, const char* buffer, int length = 0) {
+      JsonDocumentReader reader(buffer, length?length:strlen(buffer), value.document);
+      reader.peekToken();
+      reader.peekValue(&value);
+   }
    static std::string stringify(Value &x) {
+      JsonDocumentWriter<false> writer;
+      writer.stringify(x);
+      return writer.flush();
+   }
+   static std::string stringify_ex(Value &x) {
       JsonDocumentWriter<true> writer;
       writer.stringify(x);
-      return writer.out.str();
+      return writer.flush();
    }
 };

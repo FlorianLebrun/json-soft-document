@@ -12,6 +12,9 @@ struct ObjectMap : Object {
          this->cproperty = (Property*)EndOfPtr;
          this->chashmap = obj->hashmap?obj->hashmap:&this->cproperty;
       }
+      inline ObjectSymbol* key() {
+         return this->cproperty->key;
+      }
       inline Property* begin() {
          while(!(this->cproperty = this->chashmap[0])) this->chashmap++;
          if(this->cproperty == EndOfPtr) return 0;
@@ -151,7 +154,7 @@ struct ObjectMap : Object {
       this->hashmap = new_map;
       this->limit += 1<<new_shift;
 
-      uint32_t mask = 1<<(32-shift);
+      uint32_t mask = 1<<(31-shift);
       for(Property** cur_map=old_map;cur_map[0] != EndOfPtr;cur_map++) {
          if(Property* cur = cur_map[0]) {
             if(cur->key->hash & mask) {
@@ -182,10 +185,10 @@ struct ObjectMap : Object {
    }
    Property* map(const char* symbol, Document* document) {
       int symbolLen = strlen(symbol);
-      return this->map(hash_case_insensitive(symbol, symbolLen), symbol, symbolLen, document);
+      return this->map(document->hash_symbol(symbol, symbolLen), symbol, symbolLen, document);
    }
    Property* map(const char* symbol, int symbolLen, Document* document) {
-      return this->map(hash_case_insensitive(symbol, symbolLen), symbol, symbolLen, document);
+      return this->map(document->hash_symbol(symbol, symbolLen), symbol, symbolLen, document);
    }
    Property* map(uint32_t hash, const char* buffer, int length, Document* document) {
 
@@ -196,7 +199,7 @@ struct ObjectMap : Object {
       }
 
       // Find the insert slot
-      uint32_t index = hash>>(32-this->shift);
+      uint32_t index = hash>>(31-this->shift);
       Property** pnext = &this->hashmap[index];
       Property* next = *pnext;
       while(next) {
@@ -225,7 +228,7 @@ struct ObjectMap : Object {
       }
 
       // Find the insert slot
-      uint32_t index = key->hash>>(32-this->shift);
+      uint32_t index = key->hash>>(31-this->shift);
       Property** pnext = &this->hashmap[index];
       Property* next = *pnext;
       while(next) {

@@ -7,20 +7,15 @@
 #include "document-utils.h"
 
 static const void* EndOfPtr = (void*)-1;
+struct SoftDoc_interface {};
 
-#ifdef SoftDoc_TEMPLATE
 template <
-   class IDocument = IDocument, 
-   class IValue = IValue, 
-      int DefaultPage_size = 100<<10<<10 // 4 Mb
+   bool caseInsensitive = false, 
+   int DefaultPage_size = 4096,
+   class IDocument = SoftDoc_interface, 
+   class IValue = SoftDoc_interface
 > 
 struct SoftDoc {
-#else
-struct SoftDoc {
-   struct IValue {};
-   struct IDocument {};
-   static const int DefaultPage_size = 100<<10<<10; // 4 Mb
-#  endif
 
    enum class TypeID {
       Undefined,
@@ -34,6 +29,20 @@ struct SoftDoc {
       Expression,
       Null,
    };
+   
+   enum tCharsetType {
+      ASCII_charset,
+      UTF8_charset,
+   };
+
+   template <int x>
+   inline static intptr_t alignX(intptr_t offset) {
+     return ((-offset)&(x - 1)) + offset;
+   }
+
+   inline static intptr_t alignPtr(intptr_t offset) {
+     return ((-offset)&(sizeof(void*) - 1)) + offset;
+   }
 
 #  include "document-encoding.hpp"
 #  include "document-base.hpp"
@@ -44,17 +53,12 @@ struct SoftDoc {
 #  include "document-json-helper.hpp"
 };
 
-#ifdef SoftDoc_TEMPLATE
-#define SoftDoc_TEMPLATE_DECL template<class IDocument,class IValue,int DefaultPage_size>
-#define SoftDoc_TEMPLATE_PREFIX SoftDoc<IDocument,IValue,DefaultPage_size>
+#define SoftDoc_TEMPLATE_DECL template<bool caseInsensitive,int DefaultPage_size,class IDocument,class IValue>
+#define SoftDoc_TEMPLATE_PREFIX SoftDoc<caseInsensitive,DefaultPage_size,IDocument,IValue>
 #define SoftDoc_CTOR()     SoftDoc_TEMPLATE_DECL inline SoftDoc_TEMPLATE_PREFIX::
 #define SoftDoc_IMPLn(T)   SoftDoc_TEMPLATE_DECL inline T SoftDoc_TEMPLATE_PREFIX::
 #define SoftDoc_IMPLi(T)   SoftDoc_TEMPLATE_DECL inline typename SoftDoc_TEMPLATE_PREFIX::T SoftDoc_TEMPLATE_PREFIX::
-#else
-#define SoftDoc_CTOR()     inline SoftDoc::
-#define SoftDoc_IMPLn(T)   inline T SoftDoc::
-#define SoftDoc_IMPLi(T)   inline SoftDoc::T SoftDoc::
-#endif
+
 #include "document-base-impl.hpp"
 
 #endif
