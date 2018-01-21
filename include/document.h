@@ -11,11 +11,12 @@ struct SoftDoc_interface {};
 
 template <
    bool caseInsensitive = false, 
-   int DefaultPage_size = 4096,
    class IDocument = SoftDoc_interface, 
    class IValue = SoftDoc_interface
 > 
 struct SoftDoc {
+  
+   static const int DefaultPage_size = 4096;
 
    enum class TypeID {
       Undefined,
@@ -53,8 +54,8 @@ struct SoftDoc {
 #  include "document-json-helper.hpp"
 };
 
-#define SoftDoc_TEMPLATE_DECL template<bool caseInsensitive,int DefaultPage_size,class IDocument,class IValue>
-#define SoftDoc_TEMPLATE_PREFIX SoftDoc<caseInsensitive,DefaultPage_size,IDocument,IValue>
+#define SoftDoc_TEMPLATE_DECL template<bool caseInsensitive,class IDocument,class IValue>
+#define SoftDoc_TEMPLATE_PREFIX SoftDoc<caseInsensitive,IDocument,IValue>
 #define SoftDoc_CTOR()     SoftDoc_TEMPLATE_DECL inline SoftDoc_TEMPLATE_PREFIX::
 #define SoftDoc_IMPLn(T)   SoftDoc_TEMPLATE_DECL inline T SoftDoc_TEMPLATE_PREFIX::
 #define SoftDoc_IMPLi(T)   SoftDoc_TEMPLATE_DECL inline typename SoftDoc_TEMPLATE_PREFIX::T SoftDoc_TEMPLATE_PREFIX::

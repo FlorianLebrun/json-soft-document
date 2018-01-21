@@ -61,6 +61,8 @@ struct Value : IValue {
    void copyMinimize(Value* src) ;
    void duplicate(Value* src);
    void subtract(Value* valueA, Value* valueB);
+   
+   int count();
 
    bool toBoolean(bool defaultValue = false) const;
    int64_t toInteger(int64_t defaultValue = 0) const;
@@ -123,7 +125,7 @@ template <class ValueImpl = Value>
 struct array_iterator {
    Item* item;
    array_iterator(Value* value) {
-      this->item = value->_array->firstItem;
+      this->item = (value->typeID==TypeID::Array)?(value->_array->firstItem):0;
    }
    ValueImpl* begin() {
       if(Item* item = this->item) return (ValueImpl*)&item->value;
@@ -138,7 +140,7 @@ struct array_iterator {
 
 template <class ValueImpl = Value>
 struct map_iterator : ObjectMap::iterator {
-   map_iterator(Value* value) : iterator(value->_map) {
+   map_iterator(Value* value) : iterator((value->typeID==TypeID::Map)?value->_map:0) {
    }
    ValueImpl* begin() {
       if(Property* prop = this->iterator::begin()) return (ValueImpl*)&prop->value;
@@ -156,10 +158,11 @@ struct map_iterator : ObjectMap::iterator {
 
 struct Allocator {
 public:
-   Allocator(int pageSize = DefaultPage_size);
+   Allocator(int defaultPageSize = DefaultPage_size);
    ~Allocator();
    __forceinline void* alloc(int size);
    __forceinline void free(void* ptr, int size);
+   void clean();
 
 private:
    struct tAllocPage {
@@ -171,6 +174,7 @@ private:
 
    tAllocPage* page;
    int pageSize;
+   int defaultPageSize;
 
    __declspec(noinline) tAllocPage* alloc_page(int size);
 };
@@ -199,20 +203,6 @@ struct Document : IDocument, Allocator {
 
    __forceinline static uint32_t hash_symbol(const char* str, int len);
 
-#ifdef SoftDoc_TEMPLATE
    virtual void* allocValue(int head);
-#else
-   void* allocValue(int head);
-#endif
 };
 
-#ifdef SoftDoc_TEMPLATE
-template <class ValueImpl>
-struct DocumentEx : Document {
-   virtual void* allocValue(int head) {
-      char* buffer = (char*)this->alloc(sizeof(ValueImpl)+head);
-      new ((ValueImpl*)&buffer[head]) ValueImpl(this);
-      return buffer;
-   }
-};
-#endif

@@ -24,7 +24,7 @@ SoftDoc_IMPLn(void) Value::set(TypeID typeID) {
   case TypeID::Map:
     this->typeID = TypeID::Map;
     this->_map = this->document->createObjectMap();
-      return;
+    return;
   default:
     this->typeID = TypeID::Undefined;
     this->_bits = 0;
@@ -52,16 +52,25 @@ SoftDoc_IMPLn(void) Value::set_symbol(const char* x, int len) {
   this->_object = (Object*)document->createObjectSymbol(x, len<0?strlen(x):len);
 }
 SoftDoc_IMPLn(void) Value::set_map(const char* classname, int len) {
-   if(this->typeID != TypeID::Map) {
-      this->set(TypeID::Map);
-   }
-   this->_map->classname = document->createObjectSymbol(classname, len<0?strlen(classname):len);
+  if(this->typeID != TypeID::Map) {
+    this->set(TypeID::Map);
+  }
+  this->_map->classname = document->createObjectSymbol(classname, len<0?strlen(classname):len);
 }
 SoftDoc_IMPLn(void) Value::set(Value* x) {
   this->typeID = x->typeID;
   this->_bits = x->_bits;
 }
-
+SoftDoc_IMPLn(int) Value::count() {
+  switch (typeID) {
+  case TypeID::Array:
+    return this->_array?this->_array->count():0;
+  case TypeID::Map:
+    return this->_map?this->_map->count():0;
+  default:
+    return 0;
+  }
+}
 SoftDoc_IMPLn(bool) Value::toBoolean(bool defaultValue) const {
   switch (this->typeID) {
   case TypeID::Boolean:
@@ -286,33 +295,34 @@ SoftDoc_IMPLi(ValueMetric) Value::getMetric() {
   metric.width = 1;
   switch (this->typeID) {
   case TypeID::Array:
-  {
-    ObjectArray::iterator it(this->_array);
-    for (Item* item = it.begin(); item; item = it.next()) {
-      ValueMetric propMetric = item->value.getMetric();
-      if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
-      metric.width += metric.width;
+    {
+      ObjectArray::iterator it(this->_array);
+      for (Item* item = it.begin(); item; item = it.next()) {
+        ValueMetric propMetric = item->value.getMetric();
+        if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
+        metric.width += metric.width;
+      }
+      metric.depth++;
     }
-    metric.depth++;
-  }
   case TypeID::Map:
-  {
-    ObjectMap::iterator it(this->_map);
-    for (Property* prop = it.begin(); prop; prop = it.next()) {
-      ValueMetric propMetric = prop->value.getMetric();
-      if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
-      metric.width += metric.width;
+    {
+      ObjectMap::iterator it(this->_map);
+      for (Property* prop = it.begin(); prop; prop = it.next()) {
+        ValueMetric propMetric = prop->value.getMetric();
+        if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
+        metric.width += metric.width;
+      }
+      metric.depth++;
     }
-    metric.depth++;
-  }
   }
   return metric;
 }
 
 
 
-SoftDoc_CTOR() Allocator::Allocator(int pageSize) {
-  this->pageSize = pageSize;
+SoftDoc_CTOR() Allocator::Allocator(int defaultPageSize) {
+  this->defaultPageSize = defaultPageSize;
+  this->pageSize = defaultPageSize;
   this->page = 0;
   this->alloc_page(0);
 }
@@ -322,6 +332,16 @@ SoftDoc_CTOR() Allocator::~Allocator() {
     this->page = buf->next;
     ::free(buf);
   }
+}
+SoftDoc_IMPLn(void) Allocator::clean() {
+  tAllocPage*& cpage = this->page->next;
+  this->page->used = 0;
+  while (cpage) {
+    tAllocPage* buf = cpage;
+    cpage = buf->next;
+    ::free(buf);
+  }
+  this->pageSize = this->defaultPageSize;
 }
 SoftDoc_IMPLi(Allocator::tAllocPage*) Allocator::alloc_page(int size) {
 
@@ -361,7 +381,6 @@ SoftDoc_IMPLn(void*) Allocator::alloc(int size) {
 SoftDoc_IMPLn(void) Allocator::free(void* ptr, int size) {
   //::free(ptr);
 }
-
 
 
 SoftDoc_CTOR() Document::Document(tCharsetType charset, int pageSize) : Allocator(pageSize) {
