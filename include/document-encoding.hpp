@@ -2,20 +2,20 @@
 #include <stdint.h>
 
 struct EncodingBuffer {
-   uint8_t* start;
-   uint8_t* end;
-   EncodingBuffer(void* buffer) {
-      this->start = (uint8_t*)buffer;
-      this->end = &((uint8_t*)buffer)[strlen((char*)buffer)];
-   }
-   EncodingBuffer(void* buffer, int size) {
-      this->start = (uint8_t*)buffer;
-      this->end = &((uint8_t*)buffer)[size];
-   }
-   EncodingBuffer(void* start, void* end) {
-      this->start = (uint8_t*)start;
-      this->end = (uint8_t*)end;
-   }
+  uint8_t* start;
+  uint8_t* end;
+  EncodingBuffer(void* buffer) {
+    this->start = (uint8_t*)buffer;
+    this->end = &((uint8_t*)buffer)[strlen((char*)buffer)];
+  }
+  EncodingBuffer(void* buffer, int size) {
+    this->start = (uint8_t*)buffer;
+    this->end = &((uint8_t*)buffer)[size];
+  }
+  EncodingBuffer(void* start, void* end) {
+    this->start = (uint8_t*)start;
+    this->end = (uint8_t*)end;
+  }
 };
 
 //   Char. number range  |        UTF-8 octet sequence 
@@ -26,21 +26,21 @@ struct EncodingBuffer {
 //   0000 0800-0000 FFFF | 1110xxxx 10xxxxxx 10xxxxxx 
 //   0001 0000-0010 FFFF | 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
 static int Ascii_to_Utf8(EncodingBuffer& src, EncodingBuffer& dst) {
-   uint8_t *s = src.start, *s_end = src.end;
-   uint8_t *d = dst.start, *d_end = dst.end-1;
-   while(s<s_end && d<d_end) {
-      uint8_t c0 = (s++)[0];
-      if(!(c0&0x80)) { // 1 byte
-         (d++)[0] = c0;
-      }
-      else { // 2 bytes
-         (d++)[0] = (c0&0x40)?0xC3:0xC2;
-         (d++)[0] = (c0&0x3f)|0x80;
-      }
-   }
-   src.start = s;
-   dst.start = d;
-   return s_end-s;
+  uint8_t *s = src.start, *s_end = src.end;
+  uint8_t *d = dst.start, *d_end = dst.end - 1;
+  while (s < s_end && d < d_end) {
+    uint8_t c0 = (s++)[0];
+    if (!(c0 & 0x80)) { // 1 byte
+      (d++)[0] = c0;
+    }
+    else { // 2 bytes
+      (d++)[0] = (c0 & 0x40) ? 0xC3 : 0xC2;
+      (d++)[0] = (c0 & 0x3f) | 0x80;
+    }
+  }
+  src.start = s;
+  dst.start = d;
+  return s_end - s;
 }
 
 //   Char. number range  |        UTF-8 octet sequence 
@@ -51,38 +51,38 @@ static int Ascii_to_Utf8(EncodingBuffer& src, EncodingBuffer& dst) {
 //   0000 0800-0000 FFFF | 1110xxxx 10xxxxxx 10xxxxxx 
 //   0001 0000-0010 FFFF | 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
 static int Utf8_to_Ascii(EncodingBuffer& src, EncodingBuffer& dst) {
-   uint8_t *s = src.start, *s_end = src.end;
-   uint8_t *d = dst.start, *d_end = dst.end;
-   while(s<s_end && d<d_end) {
-      uint8_t c0 = s[0];
-      if(!(c0&0x80)) { // 1 byte
-         (d++)[0] = c0;
-         s++;
+  uint8_t *s = src.start, *s_end = src.end;
+  uint8_t *d = dst.start, *d_end = dst.end;
+  while (s < s_end && d < d_end) {
+    uint8_t c0 = s[0];
+    if (!(c0 & 0x80)) { // 1 byte
+      (d++)[0] = c0;
+      s++;
+    }
+    else if (!(c0 & 0x40)) { // error: uncomplete character
+      (d++)[0] = '?';
+      s += 1;
+    }
+    else if (!(c0 & 0x20)) { // 2 bytes
+      uint8_t c1 = s[1]; // WARNING: read overflow risk
+      if (!(c0 & 0x1C)) {
+        (d++)[0] = (c0 & 0x3F) | (c1 << 6);
       }
-      else if(!(c0&0x40)) { // error: uncomplete character
-         (d++)[0] = '?';
-         s += 1;
+      else {
+        (d++)[0] = '?';
       }
-      else if(!(c0&0x20)) { // 2 bytes
-         uint8_t c1 = s[1]; // WARNING: read overflow risk
-         if(!(c0&0x1C)) {
-            (d++)[0] = (c0&0x3F) | (c1<<6);
-         }
-         else {
-            (d++)[0] = '?';
-         }
-         s += 2;
-      }
-      else if(!(c0&0x10)) { // 3 bytes
-         (d++)[0] = '?';
-         s += 3;
-      }
-      else if(!(c0&0x08)) { // 4 bytes
-         (d++)[0] = '?';
-         s += 4;
-      }
-   }
-   src.start = s;
-   dst.start = d;
-   return s_end-s;
+      s += 2;
+    }
+    else if (!(c0 & 0x10)) { // 3 bytes
+      (d++)[0] = '?';
+      s += 3;
+    }
+    else if (!(c0 & 0x08)) { // 4 bytes
+      (d++)[0] = '?';
+      s += 4;
+    }
+  }
+  src.start = s;
+  dst.start = d;
+  return s_end - s;
 }

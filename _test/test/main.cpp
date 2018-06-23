@@ -14,38 +14,13 @@ const char* propertyNames[] = {
    "a","list","of","relevant","keywords"
 };
 
-struct IMyValue {
-   virtual std::string toString() {
-      return "IMyValue";
-   }
-};
-struct IMyDocument {
-   virtual std::string toString() {return "IMyDocument";}
-};
 
-#ifdef SoftDoc_TEMPLATE
-typedef SoftDoc<IMyDocument, IMyValue> SoftDocX;
-
-struct Value : SoftDocX::Value {
-   SoftDocX::ObjectString* ll;
-   Value(SoftDocX::Document* document) : SoftDocX::Value(document) {
-   }
-   virtual std::string toString() override {
-      this->ll = document->createObjectString("hhelo", 5);
-      return this->ll->buffer;
-   }
-};
-
-typedef SoftDocX::DocumentEx<Value> Document;
-#else
-typedef SoftDoc SoftDocX;
-typedef SoftDocX::Document Document;
-typedef SoftDocX::Value Value;
-#endif
-
-typedef SoftDocX::JSON JSON;
-typedef SoftDocX::ObjectMap ObjectMap;
-typedef SoftDocX::ObjectString ObjectString;
+typedef SoftDoc<> JSONDoc;
+typedef JSONDoc::Document Document;
+typedef JSONDoc::Value Value;
+typedef JSONDoc::JSON JSON;
+typedef JSONDoc::ObjectMap ObjectMap;
+typedef JSONDoc::ObjectString ObjectString;
 
 typedef std::pair<uint32_t, const char*> t_pair;
 
@@ -61,12 +36,12 @@ void main() {
       uint32_t hash;
       const char* symbol;
       int length;
-      SoftDoc::ObjectSymbol* key;
+      JSONDoc::ObjectSymbol* key;
    };
    int numProperties = sizeof(propertyNames)/sizeof(char*);
    tSymbol* properties = new tSymbol[numProperties];
    for(int i=0;i<numProperties;i++) {
-      properties[i].hash = SoftDocX::hash_case_sensitive(propertyNames[i], strlen(propertyNames[i]));
+      properties[i].hash = JSONDoc::ObjectSymbol::hash_symbol(propertyNames[i], strlen(propertyNames[i]));
       properties[i].symbol = propertyNames[i];
       properties[i].length = strlen(propertyNames[i]);
       properties[i].key = doc.createObjectSymbol(propertyNames[i]);

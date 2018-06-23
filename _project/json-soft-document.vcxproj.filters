@@ -8,11 +8,12 @@
     <ClInclude Include="../include/document-object-array.h" />
     <ClInclude Include="../include/document-object-expression.h" />
     <ClInclude Include="../include/document-object-map.h" />
-    <ClInclude Include="../include/document-object-strings.h" />
-    <ClInclude Include="../include/document-utils.h" />
     <ClInclude Include="../include/document.h" />
+    <ClInclude Include="..\include\document-object-string.h" />
+    <ClInclude Include="..\include\document-object-symbol.h" />
+    <ClInclude Include="..\include\document-utils.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="../src/document-utils.cpp" />
+    <ClCompile Include="..\src\document-utils.cpp" />
   </ItemGroup>
 </Project>

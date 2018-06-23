@@ -1,4 +1,10 @@
 
+#define SoftDoc_TEMPLATE_DECL template<bool caseInsensitive,bool orderedMap,class IDocument,class IValue>
+#define SoftDoc_TEMPLATE_PREFIX SoftDoc<caseInsensitive,orderedMap,IDocument,IValue>
+#define SoftDoc_CTOR()     SoftDoc_TEMPLATE_DECL inline SoftDoc_TEMPLATE_PREFIX::
+#define SoftDoc_IMPLn(T)   SoftDoc_TEMPLATE_DECL inline T SoftDoc_TEMPLATE_PREFIX::
+#define SoftDoc_IMPLi(T)   SoftDoc_TEMPLATE_DECL inline typename SoftDoc_TEMPLATE_PREFIX::T SoftDoc_TEMPLATE_PREFIX::
+
 SoftDoc_CTOR() Value::Value(Document* document) {
   this->document = document;
   this->typeID = TypeID::Undefined;
@@ -44,18 +50,18 @@ SoftDoc_IMPLn(void) Value::set(double x) {
 }
 SoftDoc_IMPLn(void) Value::set(const char* x, int len) {
   this->typeID = TypeID::String;
-  this->_object = (Object*)document->createObjectString(x, len<0?strlen(x):len);
+  this->_object = (Object*)document->createObjectString(x, len < 0 ? strlen(x) : len);
 }
 SoftDoc_IMPLn(void) Value::set_symbol(const char* x, int len) {
   if (len < 0) len = strlen(x);
   this->typeID = TypeID::Symbol;
-  this->_object = (Object*)document->createObjectSymbol(x, len<0?strlen(x):len);
+  this->_object = (Object*)document->createObjectSymbol(x, len < 0 ? strlen(x) : len);
 }
 SoftDoc_IMPLn(void) Value::set_map(const char* classname, int len) {
-  if(this->typeID != TypeID::Map) {
+  if (this->typeID != TypeID::Map) {
     this->set(TypeID::Map);
   }
-  this->_map->classname = document->createObjectSymbol(classname, len<0?strlen(classname):len);
+  this->_map->classname = document->createObjectSymbol(classname, len < 0 ? strlen(classname) : len);
 }
 SoftDoc_IMPLn(void) Value::set(Value* x) {
   this->typeID = x->typeID;
@@ -64,9 +70,9 @@ SoftDoc_IMPLn(void) Value::set(Value* x) {
 SoftDoc_IMPLn(int) Value::count() {
   switch (typeID) {
   case TypeID::Array:
-    return this->_array?this->_array->count():0;
+    return this->_array ? this->_array->count() : 0;
   case TypeID::Map:
-    return this->_map?this->_map->count():0;
+    return this->_map ? this->_map->count() : 0;
   default:
     return 0;
   }
@@ -295,25 +301,25 @@ SoftDoc_IMPLi(ValueMetric) Value::getMetric() {
   metric.width = 1;
   switch (this->typeID) {
   case TypeID::Array:
-    {
-      ObjectArray::iterator it(this->_array);
-      for (Item* item = it.begin(); item; item = it.next()) {
-        ValueMetric propMetric = item->value.getMetric();
-        if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
-        metric.width += metric.width;
-      }
-      metric.depth++;
+  {
+    ObjectArray::iterator it(this->_array);
+    for (Item* item = it.begin(); item; item = it.next()) {
+      ValueMetric propMetric = item->value.getMetric();
+      if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
+      metric.width += metric.width;
     }
+    metric.depth++;
+  }
   case TypeID::Map:
-    {
-      ObjectMap::iterator it(this->_map);
-      for (Property* prop = it.begin(); prop; prop = it.next()) {
-        ValueMetric propMetric = prop->value.getMetric();
-        if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
-        metric.width += metric.width;
-      }
-      metric.depth++;
+  {
+    ObjectMap::iterator it(this->_map);
+    for (Property* prop = it.begin(); prop; prop = it.next()) {
+      ValueMetric propMetric = prop->value.getMetric();
+      if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
+      metric.width += metric.width;
     }
+    metric.depth++;
+  }
   }
   return metric;
 }
@@ -419,10 +425,10 @@ SoftDoc_IMPLi(ObjectString*) Document::createObjectString(const char* str, int l
 }
 SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(const char* str) {
   int len = strlen(str);
-  return this->createObjectSymbol(this->hash_symbol(str, len), str, len);
+  return this->createObjectSymbol(ObjectSymbol::hash_symbol(str, len), str, len);
 }
 SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(const char* str, int len) {
-  return this->createObjectSymbol(this->hash_symbol(str, len), str, len);
+  return this->createObjectSymbol(ObjectSymbol::hash_symbol(str, len), str, len);
 }
 SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(uint32_t hash, const char* str, int len) {
   ObjectSymbol* obj = (ObjectSymbol*)this->alloc(sizeof(ObjectSymbol) + len);
@@ -458,8 +464,4 @@ SoftDoc_IMPLn(void*) Document::allocValue(int head) {
   char* buffer = (char*)this->alloc(sizeof(Value) + head);
   ((Value*)&buffer[head])->Value::Value(this);
   return buffer;
-}
-SoftDoc_IMPLn(uint32_t) Document::hash_symbol(const char* str, int len) {
-  if (caseInsensitive) return softdoc_hash_utf8_icrc31(0, str, len);
-  else return softdoc_hash_murmur3_31((uint8_t*)str, len, 0);
 }

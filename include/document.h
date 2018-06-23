@@ -6,59 +6,52 @@
 #include <sstream>
 #include "document-utils.h"
 
-static const void* EndOfPtr = (void*)-1;
-struct SoftDoc_interface {};
-
 template <
-   bool caseInsensitive = false, 
-   class IDocument = SoftDoc_interface, 
-   class IValue = SoftDoc_interface
-> 
+  bool caseInsensitive = false,
+  bool orderedMap = false,
+  class IDocument = SoftDoc_Utils::base_interface,
+  class IValue = SoftDoc_Utils::base_interface
+>
 struct SoftDoc {
-  
-   static const int DefaultPage_size = 4096;
 
-   enum class TypeID {
-      Undefined,
-      Integer,
-      Number,
-      Boolean,
-      Map,
-      Array,
-      String,
-      Symbol,
-      Expression,
-      Null,
-   };
-   
-   enum tCharsetType {
-      ASCII_charset,
-      UTF8_charset,
-   };
+  static const int DefaultPage_size = 4096;
 
-   template <int x>
-   inline static intptr_t alignX(intptr_t offset) {
-     return ((-offset)&(x - 1)) + offset;
-   }
+  enum class TypeID {
+    Undefined,
+    Integer,
+    Number,
+    Boolean,
+    Map,
+    Array,
+    String,
+    Symbol,
+    Expression,
+    Null,
+  };
 
-   inline static intptr_t alignPtr(intptr_t offset) {
-     return ((-offset)&(sizeof(void*) - 1)) + offset;
-   }
+  enum tCharsetType {
+    ASCII_charset,
+    UTF8_charset,
+  };
+
+  template <int x>
+  inline static intptr_t alignX(intptr_t offset) {
+    return ((-offset)&(x - 1)) + offset;
+  }
+
+  inline static intptr_t alignPtr(intptr_t offset) {
+    return ((-offset)&(sizeof(void*) - 1)) + offset;
+  }
 
 #  include "document-encoding.hpp"
 #  include "document-base.hpp"
-#  include "document-object-strings.h"
+#  include "document-object-string.h"
+#  include "document-object-symbol.h"
 #  include "document-object-array.h"
 #  include "document-object-expression.h"
 #  include "document-object-map.h"
 #  include "document-json-helper.hpp"
 };
-
-#define SoftDoc_TEMPLATE_DECL template<bool caseInsensitive,class IDocument,class IValue>
-#define SoftDoc_TEMPLATE_PREFIX SoftDoc<caseInsensitive,IDocument,IValue>
-#define SoftDoc_CTOR()     SoftDoc_TEMPLATE_DECL inline SoftDoc_TEMPLATE_PREFIX::
-#define SoftDoc_IMPLn(T)   SoftDoc_TEMPLATE_DECL inline T SoftDoc_TEMPLATE_PREFIX::
-#define SoftDoc_IMPLi(T)   SoftDoc_TEMPLATE_DECL inline typename SoftDoc_TEMPLATE_PREFIX::T SoftDoc_TEMPLATE_PREFIX::
 
 #include "document-base-impl.hpp"
 

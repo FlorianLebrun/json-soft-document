@@ -1,6 +1,5 @@
 
-#include <stdint.h>
-#include <sstream>
+#include "../include/document-utils.h"
 
 static const uint32_t c_hash31Mask = 0x7fffffff;
 
@@ -39,14 +38,14 @@ static const uint32_t crc32Table[256] = {
    0x79B737BA,0x8BDCB4B9,0x988C474D,0x6AE7C44E,0xBE2DA0A5,0x4C4623A6,0x5F16D052,0xAD7D5351,
 };
 
-uint32_t softfoc_hash_utf8_crc31(uint32_t crc, const void *buf, size_t size)
+uint32_t SoftDoc_Utils::hash_utf8_crc31(uint32_t crc, const void *buf, size_t size)
 {
-   const uint8_t *p = (const uint8_t*)buf;
-   while (size--) {
-      const uint8_t x = crc ^ (*p++);
-      crc = crc32Table[x] ^ (crc >> 8);
-   }
-   return crc & c_hash31Mask;
+  const uint8_t *p = (const uint8_t*)buf;
+  while (size--) {
+    const uint8_t x = crc ^ (*p++);
+    crc = crc32Table[x] ^ (crc >> 8);
+  }
+  return crc & c_hash31Mask;
 }
 
 
@@ -85,64 +84,64 @@ static const uint32_t icrc32Table[256] = {
    0x79B737BA,0x8BDCB4B9,0x988C474D,0x6AE7C44E,0xBE2DA0A5,0x4C4623A6,0x5F16D052,0xAD7D5351,
 };
 
-uint32_t softdoc_hash_utf8_icrc31(uint32_t crc, const void *buf, size_t size)
+uint32_t SoftDoc_Utils::hash_utf8_icrc31(uint32_t crc, const void *buf, size_t size)
 {
-   const uint8_t *p = (const uint8_t*)buf;
-   while (size--) {
-      const uint8_t x = crc ^ (*p++);
-      crc = icrc32Table[x] ^ (crc >> 8);
-   }
-   return crc & c_hash31Mask;
+  const uint8_t *p = (const uint8_t*)buf;
+  while (size--) {
+    const uint8_t x = crc ^ (*p++);
+    crc = icrc32Table[x] ^ (crc >> 8);
+  }
+  return crc & c_hash31Mask;
 }
 
-uint32_t softdoc_hash_murmur3_31(const uint8_t* key, size_t len, uint32_t seed) {
-   uint32_t h = seed;
-   if (len > 3) {
-      const uint32_t* key_x4 = (const uint32_t*) key;
-      size_t i = len >> 2;
-      do {
-         uint32_t k = *key_x4++;
-         k *= 0xcc9e2d51;
-         k = (k << 15) | (k >> 17);
-         k *= 0x1b873593;
-         h ^= k;
-         h = (h << 13) | (h >> 19);
-         h = (h * 5) + 0xe6546b64;
-      } while (--i);
-      key = (const uint8_t*) key_x4;
-   }
-   if (len & 3) {
-      size_t i = len & 3;
-      uint32_t k = 0;
-      key = &key[i - 1];
-      do {
-         k <<= 8;
-         k |= *key--;
-      } while (--i);
+uint32_t SoftDoc_Utils::hash_murmur3_31(const uint8_t* key, size_t len, uint32_t seed) {
+  uint32_t h = seed;
+  if (len > 3) {
+    const uint32_t* key_x4 = (const uint32_t*)key;
+    size_t i = len >> 2;
+    do {
+      uint32_t k = *key_x4++;
       k *= 0xcc9e2d51;
       k = (k << 15) | (k >> 17);
       k *= 0x1b873593;
       h ^= k;
-   }
-   h ^= len;
-   h ^= h >> 16;
-   h *= 0x85ebca6b;
-   h ^= h >> 13;
-   h *= 0xc2b2ae35;
-   h ^= h >> 16;
-   return h & c_hash31Mask;
+      h = (h << 13) | (h >> 19);
+      h = (h * 5) + 0xe6546b64;
+    } while (--i);
+    key = (const uint8_t*)key_x4;
+  }
+  if (len & 3) {
+    size_t i = len & 3;
+    uint32_t k = 0;
+    key = &key[i - 1];
+    do {
+      k <<= 8;
+      k |= *key--;
+    } while (--i);
+    k *= 0xcc9e2d51;
+    k = (k << 15) | (k >> 17);
+    k *= 0x1b873593;
+    h ^= k;
+  }
+  h ^= len;
+  h ^= h >> 16;
+  h *= 0x85ebca6b;
+  h ^= h >> 13;
+  h *= 0xc2b2ae35;
+  h ^= h >> 16;
+  return h & c_hash31Mask;
 }
 
-uint32_t softdoc_hash_jenkins_31(const uint8_t* key, size_t length) {
-   size_t i = 0;
-   uint32_t hash = 0;
-   while (i != length) {
-      hash += key[i++];
-      hash += hash << 10;
-      hash ^= hash >> 6;
-   }
-   hash += hash << 3;
-   hash ^= hash >> 11;
-   hash += hash << 15;
-   return hash & c_hash31Mask;
+uint32_t SoftDoc_Utils::hash_jenkins_31(const uint8_t* key, size_t length) {
+  size_t i = 0;
+  uint32_t hash = 0;
+  while (i != length) {
+    hash += key[i++];
+    hash += hash << 10;
+    hash ^= hash >> 6;
+  }
+  hash += hash << 3;
+  hash ^= hash >> 11;
+  hash += hash << 15;
+  return hash & c_hash31Mask;
 }

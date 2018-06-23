@@ -7,7 +7,7 @@ struct ObjectArray : Object {
   struct iterator {
     Item* item;
     inline iterator(ObjectArray* obj) {
-      if(obj) this->item = obj->firstItem;
+      if (obj) this->item = obj->firstItem;
       else this->item = 0;
     }
     inline Item* begin() {
@@ -25,11 +25,11 @@ struct ObjectArray : Object {
     this->length = 0;
   }
   bool equals(ObjectArray* other) {
-    if(this->length != other->length) return false;
+    if (this->length != other->length) return false;
     Item* itemX = this->firstItem;
     Item* itemY = other->firstItem;
-    while(itemX && itemY) {
-      if(!itemX->value.equals(&itemY->value)) return false;
+    while (itemX && itemY) {
+      if (!itemX->value.equals(&itemY->value)) return false;
       itemX = itemX->next;
       itemY = itemY->next;
     }
@@ -40,14 +40,14 @@ struct ObjectArray : Object {
   }
   ObjectArray* copy(Document* document) {
     ObjectArray* obj = document->createObjectArray();
-    for(Item* itemX = this->firstItem;itemX;itemX=itemX->next) {
+    for (Item* itemX = this->firstItem; itemX; itemX = itemX->next) {
       obj->push_back(document)->value.set(&itemX->value);
     }
     return obj;
   }
   ObjectArray* duplicate(Document* document) {
     ObjectArray* obj = document->createObjectArray();
-    for(Item* itemX = this->firstItem;itemX;itemX=itemX->next) {
+    for (Item* itemX = this->firstItem; itemX; itemX = itemX->next) {
       obj->push_back(document)->value.duplicate(&itemX->value);
     }
     return obj;
@@ -59,10 +59,10 @@ struct ObjectArray : Object {
     // Compute first subtract with empty result
     Value lastDiffValue(document);
     bool hasDiff = false;
-    for(;;) {
-      if(itemX && itemY) {
+    for (;;) {
+      if (itemX && itemY) {
         lastDiffValue.subtract(&itemX->value, &itemY->value);
-        if(lastDiffValue.typeID != TypeID::Undefined) {
+        if (lastDiffValue.typeID != TypeID::Undefined) {
           hasDiff = true;
           break;
         }
@@ -76,29 +76,29 @@ struct ObjectArray : Object {
     }
 
     // Create a minimized array when difference found
-    if(hasDiff) {
+    if (hasDiff) {
       ObjectArray* obj = document->createObjectArray();
 
       // Fill with first elements
-      for(Item* prevX=this->firstItem;prevX!=itemX;prevX=prevX->next) {
+      for (Item* prevX = this->firstItem; prevX != itemX; prevX = prevX->next) {
         obj->push_back(document)->value.copyMinimize(&prevX->value);
       }
 
       // Fill with last diff value
-      if(lastDiffValue.typeID != TypeID::Undefined) {
+      if (lastDiffValue.typeID != TypeID::Undefined) {
         obj->push_back(document)->value.set(&lastDiffValue);
         itemX = itemX->next;
         itemY = itemY->next;
       }
 
       // Fill with last subtracted elements
-      if(itemX && itemY) {
+      if (itemX && itemY) {
         itemX = itemX->next;
         itemY = itemY->next;
-        while(itemX && itemY) {
+        while (itemX && itemY) {
           Item* item = obj->push_back(document);
           item->value.subtract(&itemX->value, &itemY->value);
-          if(item->value.typeID == TypeID::Undefined) {
+          if (item->value.typeID == TypeID::Undefined) {
             item->value.copyMinimize(&itemX->value);
           }
           itemX = itemX->next;
@@ -107,11 +107,11 @@ struct ObjectArray : Object {
       }
 
       // Fill with minimized elements
-      if(itemX) {
+      if (itemX) {
         do {
           obj->push_back(document)->value.copyMinimize(&itemX->value);
           itemX = itemX->next;
-        } while(itemX);
+        } while (itemX);
       }
       return obj;
     }
@@ -121,7 +121,7 @@ struct ObjectArray : Object {
   Item* push_front(Document* document) {
     Item* item = document->createItem();
     item->next = this->firstItem;
-    if(!this->firstItem) this->lastItem = item;
+    if (!this->firstItem) this->lastItem = item;
     this->firstItem = item;
     this->length++;
     return item;
@@ -129,7 +129,7 @@ struct ObjectArray : Object {
   Item* push_back(Document* document) {
     Item* item = document->createItem();
     item->next = 0;
-    if(this->lastItem) this->lastItem->next = item;
+    if (this->lastItem) this->lastItem->next = item;
     else this->firstItem = item;
     this->lastItem = item;
     this->length++;
@@ -137,7 +137,7 @@ struct ObjectArray : Object {
   }
   Item* get(intptr_t index) {
     Item* item;
-    for(item=this->firstItem;item && index;item=item->next) index--;
+    for (item = this->firstItem; item && index; item = item->next) index--;
     return item;
   }
 };

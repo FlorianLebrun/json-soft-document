@@ -3,7 +3,7 @@ class JsonDocumentReader {
 public:
   struct tString {
     bool symbolic;
-    const char*ptr; 
+    const char*ptr;
     int len;
     inline bool equals(const char* str) {
       return !strncmp(ptr, str, len);
@@ -23,10 +23,10 @@ public:
       LastValue_Token = BEGIN_XPR,
 
       // Not ex
-      END_ARRAY, 
-      END_OBJECT, 
+      END_ARRAY,
+      END_OBJECT,
       END_XPR,
-      SEPARATOR, 
+      SEPARATOR,
       ASSOCIATION,
       END,
     };
@@ -39,7 +39,7 @@ public:
     };
   };
 
-  enum chrMask{
+  enum chrMask {
     chr_NAME = 1,
     chr_NUMBER_BEGIN = 2,
     chr_NUMBER = 4,
@@ -113,54 +113,55 @@ public:
 
   inline int decodeHexchar(char c)
   {
-    if(c>='0' && c<='9') return c-'0';
-    if(c>='a' && c<='z') return c-'a'+10;
-    if(c>='A' && c<='Z') return c-'A'+10;
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'z') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'Z') return c - 'A' + 10;
     return -1;
   }
 
   int copyString(char* buffer, tString& _string) {
     char* dst = buffer;
-    const char* src_end = _string.ptr+_string.len;
-    for(const char* src = _string.ptr;src<src_end;src++) {
-      if(*src == '\\') {
+    const char* src_end = _string.ptr + _string.len;
+    for (const char* src = _string.ptr; src < src_end; src++) {
+      if (*src == '\\') {
         src++;
-        switch(*src) {
-        case '"':*dst = '"';break;
-        case '\\':*dst = '\\';break;
-        case '/':*dst = '/';break;
-        case 'b':*dst = '\b';break;
-        case 'f':*dst = '\f';break;
-        case 'n':*dst = '\n';break;
-        case 'r':*dst = '\r';break;
-        case 't':*dst = '\t';break;
+        switch (*src) {
+        case '"':*dst = '"'; break;
+        case '\\':*dst = '\\'; break;
+        case '/':*dst = '/'; break;
+        case 'b':*dst = '\b'; break;
+        case 'f':*dst = '\f'; break;
+        case 'n':*dst = '\n'; break;
+        case 'r':*dst = '\r'; break;
+        case 't':*dst = '\t'; break;
         case 'u':
-          *dst = (decodeHexchar(src[1])<<12) + (decodeHexchar(src[2])<<8) + 
-            (decodeHexchar(src[3])<<4) + (decodeHexchar(src[4])<<4);
+          *dst = (decodeHexchar(src[1]) << 12) + (decodeHexchar(src[2]) << 8) +
+            (decodeHexchar(src[3]) << 4) + (decodeHexchar(src[4]) << 4);
           src += 4;
           break;
         default:*dst = *src;
         }
         dst++;
-      } else {
+      }
+      else {
         *dst = *src;
         dst++;
       }
     }
     *dst = '\0';
-    return dst-buffer;
+    return dst - buffer;
   }
   ObjectString* createString(tString& _string) {
-    ObjectString* obj = (ObjectString*)document->alloc(sizeof(ObjectString)+_string.len);
+    ObjectString* obj = (ObjectString*)document->alloc(sizeof(ObjectString) + _string.len);
     obj->length = this->copyString(obj->buffer, _string);
     obj->buffer[obj->length] = 0;
     return obj;
   }
   ObjectSymbol* createSymbol(tString& _string) {
-    ObjectSymbol* obj = (ObjectSymbol*)document->alloc(sizeof(ObjectSymbol)+_string.len);
+    ObjectSymbol* obj = (ObjectSymbol*)document->alloc(sizeof(ObjectSymbol) + _string.len);
     obj->length = this->copyString(obj->buffer, _string);
     obj->buffer[obj->length] = 0;
-    obj->hash = document->hash_symbol(obj->buffer, obj->length);
+    obj->hash = ObjectSymbol::hash_symbol(obj->buffer, obj->length);
     return obj;
   }
 
@@ -198,18 +199,18 @@ public:
     if (token._string.equals("true")) {
       token.id = tToken::BOOLEAN;
       token._boolean = true;
-    } 
+    }
     else if (token._string.equals("false")) {
       token.id = tToken::BOOLEAN;
       token._boolean = false;
-    } 
+    }
     else if (token._string.equals("null")) {
       token.id = tToken::NUL;
     }
   }
   void peekTaggedSymbol() {
     char c = buffer[cursor];
-    if(c=='\'' || c == '"') {
+    if (c == '\'' || c == '"') {
       cursor++;
       peekString(c);
       token._string.symbolic = true;
@@ -220,10 +221,10 @@ public:
   }
 
   int32_t peekIntegerDigits(bool isSigned, int64_t &acc) {
-    char c = (cursor < bufferSize)?buffer[cursor]:'\0';
+    char c = (cursor < bufferSize) ? buffer[cursor] : '\0';
 
     bool sign = false;
-    if(isSigned && c =='-') {
+    if (isSigned && c == '-') {
       sign = true;
       cursor++;
     }
@@ -233,7 +234,7 @@ public:
       c = buffer[cursor];
       uint8_t cdef = char_def[c];
       if (cdef & chr_NUMBER) {
-        acc = (acc*10)+(c-'0');
+        acc = (acc * 10) + (c - '0');
         exp++;
       }
       else {
@@ -241,38 +242,38 @@ public:
       }
       cursor++;
     }
-    if(sign) acc = -acc;
+    if (sign) acc = -acc;
     return exp;
   }
 
   void peekNumber() {
     char c;
     int64_t intPart = 0;
-    int expPart = 0;
+    int64_t expPart = 0;
 
     peekIntegerDigits(true, intPart);
-    c = (cursor < bufferSize)?buffer[cursor]:'\0';
+    c = (cursor < bufferSize) ? buffer[cursor] : '\0';
 
-    if(c =='.') {
+    if (c == '.') {
       cursor++;
       expPart = -peekIntegerDigits(false, intPart);
-      c = (cursor < bufferSize)?buffer[cursor]:'\0';
+      c = (cursor < bufferSize) ? buffer[cursor] : '\0';
     }
 
-    if(c =='e') {
+    if (c == 'e') {
       int64_t expAcc = 0;
       cursor++;
       peekIntegerDigits(true, expAcc);
       expPart += expAcc;
     }
 
-    if(expPart) {
+    if (expPart) {
       token.id = tToken::NUMBER;
       token._number = intPart*pow(10, expPart);
     }
     else {
       token.id = tToken::INTEGER;
-      token._integer = intPart*pow(10, expPart);
+      token._integer = int64_t(intPart*pow(10, expPart));
     }
   }
 
@@ -335,12 +336,14 @@ public:
               cursor++;
             }
             cursor++;
-          } else if (buffer[cursor] == '/') {
+          }
+          else if (buffer[cursor] == '/') {
             cursor++;
             while (cursor < bufferSize && buffer[cursor] != '\n') {
               cursor++;
             }
-          } else {
+          }
+          else {
             logError("unexpected char '/'");
           }
 
@@ -352,7 +355,7 @@ public:
         if (c == '\n')
           line++;
         if (cdef != chr_INVISIBLE) {
-          logError("unexpected char '%c'", (char) c);
+          logError("unexpected char '%c'", (char)c);
         }
         cursor++;
       }
@@ -366,24 +369,26 @@ public:
     // Check if it is really a statement begin
     if (token.id == tToken::STRING) {
       Property* prop = obj->map(token._string.ptr, token._string.len, document);
-      if(prop->value.typeID != TypeID::Undefined) {
+      if (prop->value.typeID != TypeID::Undefined) {
         logError("an element is declared more than ones");
       }
       peekToken();
 
-      if(token.id == tToken::ASSOCIATION) {
+      if (token.id == tToken::ASSOCIATION) {
         peekToken();
-      } else {
+      }
+      else {
         logError("a expected statement is mis formed, it shall be define by 'name:value'");
       }
 
       peekValue(&prop->value);
 
-      if(this->classname_property && prop->value.typeID == TypeID::String && prop->key->equals(this->classname_property)) {
+      if (this->classname_property && prop->value.typeID == TypeID::String && prop->key->equals(this->classname_property)) {
         ObjectString* classname = prop->value._string;
-        if(!obj->classname) {
+        if (!obj->classname) {
           obj->classname = document->createObjectSymbol(classname->buffer, classname->length);
-        } else {
+        }
+        else {
           logError("classname cannot be defined twice");
         }
       }
@@ -404,7 +409,7 @@ public:
         if (token.id == tToken::STRING) {
           peekProperty(obj);
         }
-        else if(!this->lenient) {
+        else if (!this->lenient) {
           logError("the name/value list is mis formated");
         }
         if (token.id != tToken::SEPARATOR) break;
@@ -412,10 +417,12 @@ public:
       }
       if (token.id == tToken::END_OBJECT) {
         peekToken();
-      } else {
+      }
+      else {
         logError("a collection shall end with ')'");
       }
-    } else {
+    }
+    else {
       logError("collection expected");
     }
   }
@@ -429,11 +436,11 @@ public:
     if (token.id == tToken::BEGIN_ARRAY) {
       peekToken();
       while (token.id != tToken::END_ARRAY) {
-        if(token.id <= tToken::LastValue_Token) {
+        if (token.id <= tToken::LastValue_Token) {
           Item* item = obj->push_back(document);
           peekValue(&item->value);
         }
-        else if(!this->lenient) {
+        else if (!this->lenient) {
           logError("the value list is mis formated");
         }
         if (token.id != tToken::SEPARATOR) break;
@@ -441,10 +448,12 @@ public:
       }
       if (token.id == tToken::END_ARRAY) {
         peekToken();
-      } else {
+      }
+      else {
         logError("an array shall end with ']'");
       }
-    } else {
+    }
+    else {
       logError("array expected");
     }
   }
@@ -467,10 +476,12 @@ public:
       }
       if (token.id == tToken::END_XPR) {
         peekToken();
-      } else {
+      }
+      else {
         logError("an expression value shall end with ']'");
       }
-    } else {
+    }
+    else {
       logError("expression value expected");
     }
   }
@@ -478,60 +489,60 @@ public:
   void peekValue(Value* value) {
 
     // Parse String
-    switch(token.id) {
-    case tToken::STRING: 
-      {
-        tString _string = token._string;
-        peekToken();
-        if (token.id == tToken::BEGIN_XPR) {
-          peekObjectExpression(value, this->createSymbol(_string));
-        }
-        else if (token.id == tToken::BEGIN_OBJECT) {
-          peekObjectMap(value, this->createSymbol(_string));
-        }
-        else if(_string.symbolic) {
-          value->typeID = TypeID::Symbol;
-          value->_object = this->createSymbol(_string);
-        }
-        else {
-          value->typeID = TypeID::String;
-          value->_object = this->createString(_string);
-        }
-      }break;
-      // Parse Number
-    case tToken::NUMBER: 
+    switch (token.id) {
+    case tToken::STRING:
+    {
+      tString _string = token._string;
+      peekToken();
+      if (token.id == tToken::BEGIN_XPR) {
+        peekObjectExpression(value, this->createSymbol(_string));
+      }
+      else if (token.id == tToken::BEGIN_OBJECT) {
+        peekObjectMap(value, this->createSymbol(_string));
+      }
+      else if (_string.symbolic) {
+        value->typeID = TypeID::Symbol;
+        value->_object = this->createSymbol(_string);
+      }
+      else {
+        value->typeID = TypeID::String;
+        value->_object = this->createString(_string);
+      }
+    }break;
+    // Parse Number
+    case tToken::NUMBER:
       value->typeID = TypeID::Number;
       value->_number = token._number;
       peekToken();
       break;
       // Parse Integer
-    case tToken::INTEGER: 
+    case tToken::INTEGER:
       value->typeID = TypeID::Integer;
       value->_integer = token._integer;
       peekToken();
       break;
       // Parse Boolean
-    case tToken::BOOLEAN: 
+    case tToken::BOOLEAN:
       value->typeID = TypeID::Boolean;
       value->_boolean = token._boolean;
       peekToken();
       break;
       // Parse Null
-    case tToken::NUL: 
+    case tToken::NUL:
       value->typeID = TypeID::Null;
       value->_object = 0;
       peekToken();
       break;
       // Parse Collection DataValue
-    case tToken::BEGIN_OBJECT: 
+    case tToken::BEGIN_OBJECT:
       peekObjectMap(value, 0);
       break;
       // Parse Array DataValue
-    case tToken::BEGIN_ARRAY: 
+    case tToken::BEGIN_ARRAY:
       peekObjectArray(value);
       break;
       // When token unexpected
-    default: 
+    default:
       logError("The data is mis formated");
       break;
     }
@@ -545,85 +556,85 @@ struct JsonDocumentWriter {
   void stringifyMap(ObjectMap* obj) {
     ObjectMap::iterator it(obj);
     int first = 1;
-    if(obj->classname) {
-      if(extended_json) {
+    if (obj->classname) {
+      if (extended_json) {
         stringifySymbol(obj->classname);
-        out<<'{';
+        out << '{';
       }
       else {
-        out<<"{\"className\":";
+        out << "{\"className\":";
         stringifySymbol(obj->classname);
         first = 0;
       }
     }
-    else out<<'{';
-    for(Property* prop=it.begin();prop;prop=it.next()) {
-      if(prop->value.typeID != TypeID::Undefined) {
-        if(!first) out<<",";
+    else out << '{';
+    for (Property* prop = it.begin(); prop; prop = it.next()) {
+      if (prop->value.typeID != TypeID::Undefined) {
+        if (!first) out << ",";
         else first = 0;
-        out<<'"'<<prop->key->buffer<<'"';
-        out<<':';
+        out << '"' << prop->key->buffer << '"';
+        out << ':';
         stringify(prop->value);
       }
       prop = prop->next;
     }
-    out<<"}";
+    out << "}";
   }
   void stringifyArray(ObjectArray* obj) {
     int first = 1;
-    out<<"[";
-    for(Item* item = obj->firstItem;item;item = item->next) {
-      if(!first) out<<",";
+    out << "[";
+    for (Item* item = obj->firstItem; item; item = item->next) {
+      if (!first) out << ",";
       else first = 0;
       stringify(item->value);
     }
-    out<<"]";
+    out << "]";
   }
   void writeString(const char* buffer, int size) {
-    for(int i=0;i<size;i++) {
+    for (int i = 0; i < size; i++) {
       char c = buffer[i];
-      if(c <= '\\') {
-        switch(c) {
-        case '\b':out<<'\\';c='b';break;// \b  Backspace (ascii code 08)
-        case '\f':out<<'\\';c='f';break;// \f  Form feed (ascii code 0C)
-        case '\n':out<<'\\';c='n';break;// \n  New line
-        case '\r':out<<'\\';c='r';break;// \r  Carriage return
-        case '\t':out<<'\\';c='t';break;// \t  Tab
-        case '\"':out<<'\\';c='\"';break;// \"  Double quote
-        case '\\':out<<'\\';c='\\';break;// \\  Backslash character
+      if (c <= '\\') {
+        switch (c) {
+        case '\b':out << '\\'; c = 'b'; break;// \b  Backspace (ascii code 08)
+        case '\f':out << '\\'; c = 'f'; break;// \f  Form feed (ascii code 0C)
+        case '\n':out << '\\'; c = 'n'; break;// \n  New line
+        case '\r':out << '\\'; c = 'r'; break;// \r  Carriage return
+        case '\t':out << '\\'; c = 't'; break;// \t  Tab
+        case '\"':out << '\\'; c = '\"'; break;// \"  Double quote
+        case '\\':out << '\\'; c = '\\'; break;// \\  Backslash character
         }
       }
-      out<<c;
+      out << c;
     }
   }
   void stringifyString(ObjectString* obj) {
-    out<<'"';
+    out << '"';
     writeString(obj->buffer, obj->length);
-    out<<'"';
+    out << '"';
   }
   void stringifySymbol(ObjectSymbol* obj) {
-    if(extended_json) out<<'#';
-    out<<'"';
+    if (extended_json) out << '#';
+    out << '"';
     writeString(obj->buffer, obj->length);
-    out<<'"';
+    out << '"';
   }
   void stringify(Value& x) {
-    switch(x.typeID) {
+    switch (x.typeID) {
     case TypeID::Integer:
-      out<<x._integer;
+      out << x._integer;
       return;
     case TypeID::Number:
-      out<<x._number;
+      out << x._number;
       return;
     case TypeID::Boolean:
-      if(x._boolean) out<<"true";
-      else out<<"false";
+      if (x._boolean) out << "true";
+      else out << "false";
       return;
     case TypeID::Null:
-      out<<"null";
+      out << "null";
       return;
     case TypeID::Undefined:
-      out<<"undefined";
+      out << "undefined";
       return;
     case TypeID::Map:
       return this->stringifyMap(x._map);
@@ -636,23 +647,23 @@ struct JsonDocumentWriter {
     }
   }
   std::string flush() {
-    std::string out = this->out.str();
-    char* buffer = (char*)::malloc((out.size()+1)*2);
-    EncodingBuffer src((char*)out.c_str(), out.size());
-    EncodingBuffer dst(buffer, (out.size()+1)*2);
-    if(Ascii_to_Utf8(src, dst)) {
+    std::string tout = this->out.str();
+    uint8_t* buffer = (uint8_t*)::malloc((tout.size()+1)*2);
+    EncodingBuffer src((uint8_t*)tout.c_str(), tout.size());
+    EncodingBuffer dst(buffer, (tout.size()+1)*2);
+    if (Ascii_to_Utf8(src, dst)) {
       throw std::exception("encoding overflow");
     }
     dst.start[0] = 0;
-    out = buffer;
+    std::string sout((char*)buffer, int(dst.start-buffer));
     ::free(buffer);
-    return out;
+    return sout;
   }
 };
 
 struct JSON {
   static void parse(Value& value, const char* buffer, int length = 0, const char* classname_property = "classname") {
-    JsonDocumentReader reader(value.document, buffer, length?length:strlen(buffer), classname_property);
+    JsonDocumentReader reader(value.document, buffer, length ? length : strlen(buffer), classname_property);
     reader.peekToken();
     reader.peekValue(&value);
   }
