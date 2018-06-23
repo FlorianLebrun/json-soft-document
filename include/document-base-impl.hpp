@@ -430,6 +430,9 @@ SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(const char* str) {
 SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(const char* str, int len) {
   return this->createObjectSymbol(ObjectSymbol::hash_symbol(str, len), str, len);
 }
+SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(ObjectString* str) {
+  return this->createObjectSymbol(str->buffer, str->length);
+}
 SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(uint32_t hash, const char* str, int len) {
   ObjectSymbol* obj = (ObjectSymbol*)this->alloc(sizeof(ObjectSymbol) + len);
   obj->hash = hash;

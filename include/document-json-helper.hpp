@@ -49,6 +49,7 @@ public:
 
   uint8_t char_def[256];
   const char* classname_property;
+  bool classname_preserve;
 
   tToken token;
   const char* buffer;
@@ -59,9 +60,10 @@ public:
 
   Document* document;
 
-  JsonDocumentReader(Document* document, const char* buffer, int bufferSize, const char* classname_property = 0) {
+  JsonDocumentReader(Document* document, const char* buffer, int bufferSize, const char* classname_property = 0, bool classname_preserve = false) {
     this->document = document;
     this->classname_property = classname_property;
+    this->classname_preserve = classname_preserve;
     this->buffer = buffer;
     this->bufferSize = bufferSize;
     this->line = 1;
@@ -368,29 +370,51 @@ public:
 
     // Check if it is really a statement begin
     if (token.id == tToken::STRING) {
-      Property* prop = obj->map(token._string.ptr, token._string.len, document);
-      if (prop->value.typeID != TypeID::Undefined) {
-        logError("an element is declared more than ones");
-      }
-      peekToken();
 
-      if (token.id == tToken::ASSOCIATION) {
+      // Read classname property
+      if (this->classname_property && token._string.equals(this->classname_property)) { 
         peekToken();
-      }
-      else {
-        logError("a expected statement is mis formed, it shall be define by 'name:value'");
-      }
-
-      peekValue(&prop->value);
-
-      if (this->classname_property && prop->value.typeID == TypeID::String && prop->key->equals(this->classname_property)) {
-        ObjectString* classname = prop->value._string;
+        if (token.id == tToken::ASSOCIATION) {
+          peekToken();
+        }
+        else {
+          logError("a expected statement is mis formed, it shall be define by 'name:value'");
+        }
+        Value classname(document);
+        peekValue(&classname);
         if (!obj->classname) {
-          obj->classname = document->createObjectSymbol(classname->buffer, classname->length);
+          if (classname.typeID == TypeID::String) {
+            obj->classname = document->createObjectSymbol(classname._string);
+          }
+          else if(classname.typeID == TypeID::Symbol) {
+            obj->classname = classname._symbol;
+          }
+          else {
+            logError("classname shall be defined with a string");
+          }
         }
         else {
           logError("classname cannot be defined twice");
         }
+        if(this->classname_preserve) {
+          Property* prop = obj->map(this->classname_property, document);
+          prop->value = classname;
+        }
+      }
+      // Read normal property
+      else {
+        Property* prop = obj->map(token._string.ptr, token._string.len, document);
+        if (prop->value.typeID != TypeID::Undefined) {
+          logError("an element is declared more than ones");
+        }
+        peekToken();
+        if (token.id == tToken::ASSOCIATION) {
+          peekToken();
+        }
+        else {
+          logError("a expected statement is mis formed, it shall be define by 'name:value'");
+        }
+        peekValue(&prop->value);
       }
     }
   }
@@ -552,7 +576,11 @@ public:
 template <bool extended_json>
 struct JsonDocumentWriter {
   std::stringstream out;
+  const char* classname_property;
 
+  JsonDocumentWriter(const char* classname_property = 0) {
+    this->classname_property = classname_property;
+  }
   void stringifyMap(ObjectMap* obj) {
     ObjectMap::iterator it(obj);
     int first = 1;
@@ -561,11 +589,12 @@ struct JsonDocumentWriter {
         stringifySymbol(obj->classname);
         out << '{';
       }
-      else {
-        out << "{\"className\":";
+      else if(this->classname_property) {
+        out << "{\""<<this->classname_property<<"\":";
         stringifySymbol(obj->classname);
         first = 0;
       }
+      else out << '{';
     }
     else out << '{';
     for (Property* prop = it.begin(); prop; prop = it.next()) {
@@ -662,13 +691,13 @@ struct JsonDocumentWriter {
 };
 
 struct JSON {
-  static void parse(Value& value, const char* buffer, int length = 0, const char* classname_property = "classname") {
-    JsonDocumentReader reader(value.document, buffer, length ? length : strlen(buffer), classname_property);
+  static void parse(Value& value, const char* buffer, int length = 0, const char* classname_property = 0, bool classname_preserve = false) {
+    JsonDocumentReader reader(value.document, buffer, length ? length : strlen(buffer), classname_property, classname_preserve);
     reader.peekToken();
     reader.peekValue(&value);
   }
-  static std::string stringify(Value &x) {
-    JsonDocumentWriter<false> writer;
+  static std::string stringify(Value &x, const char* classname_property = 0) {
+    JsonDocumentWriter<false> writer(classname_property);
     writer.stringify(x);
     return writer.flush();
   }

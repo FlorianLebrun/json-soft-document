@@ -195,6 +195,7 @@ struct Document : IDocument, Allocator {
   __forceinline ObjectSymbol* createObjectSymbol(uint32_t hash, const char* str, int len);
   __forceinline ObjectSymbol* createObjectSymbol(const char* str, int len);
   __forceinline ObjectSymbol* createObjectSymbol(const char* str);
+  __forceinline ObjectSymbol* createObjectSymbol(ObjectString* str);
 
   __forceinline Property* createProperty(uint32_t hash, const char* str, int len);
   __forceinline Property* createProperty(ObjectSymbol* symbol);

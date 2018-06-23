@@ -37,7 +37,7 @@ struct ObjectMapBase<true> : Object {
     ObjectMap* dst = document->createObjectMap();
     dst->classname = this->classname;
     Property* dst_prop = 0;
-    for (Property* src_prop = this->next; src_prop; src_prop = src_prop->next) {
+    for (Property* src_prop = this->first; src_prop; src_prop = src_prop->next) {
       Property* cprop = document->createProperty(src_prop->key);
       if (deep) cprop->value.duplicate(&src_prop->value);
       else cprop->value.copy(&src_prop->value);
