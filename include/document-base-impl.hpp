@@ -301,25 +301,27 @@ SoftDoc_IMPLi(ValueMetric) Value::getMetric() {
   metric.width = 1;
   switch (this->typeID) {
   case TypeID::Array:
-  {
-    ObjectArray::iterator it(this->_array);
-    for (Item* item = it.begin(); item; item = it.next()) {
-      ValueMetric propMetric = item->value.getMetric();
-      if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
-      metric.width += metric.width;
+    {
+      ObjectArray::iterator it(this->_array);
+      for (Item* item = it.begin(); item; item = it.next()) {
+        ValueMetric propMetric = item->value.getMetric();
+        if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
+        metric.width += metric.width;
+      }
+      metric.depth++;
+      return metric;
     }
-    metric.depth++;
-  }
   case TypeID::Map:
-  {
-    ObjectMap::iterator it(this->_map);
-    for (Property* prop = it.begin(); prop; prop = it.next()) {
-      ValueMetric propMetric = prop->value.getMetric();
-      if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
-      metric.width += metric.width;
+    {
+      ObjectMap::iterator it(this->_map);
+      for (Property* prop = it.begin(); prop; prop = it.next()) {
+        ValueMetric propMetric = prop->value.getMetric();
+        if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
+        metric.width += metric.width;
+      }
+      metric.depth++;
+      return metric;
     }
-    metric.depth++;
-  }
   }
   return metric;
 }

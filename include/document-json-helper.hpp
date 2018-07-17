@@ -515,25 +515,25 @@ public:
     // Parse String
     switch (token.id) {
     case tToken::STRING:
-    {
-      tString _string = token._string;
-      peekToken();
-      if (token.id == tToken::BEGIN_XPR) {
-        peekObjectExpression(value, this->createSymbol(_string));
-      }
-      else if (token.id == tToken::BEGIN_OBJECT) {
-        peekObjectMap(value, this->createSymbol(_string));
-      }
-      else if (_string.symbolic) {
-        value->typeID = TypeID::Symbol;
-        value->_object = this->createSymbol(_string);
-      }
-      else {
-        value->typeID = TypeID::String;
-        value->_object = this->createString(_string);
-      }
-    }break;
-    // Parse Number
+      {
+        tString _string = token._string;
+        peekToken();
+        if (token.id == tToken::BEGIN_XPR) {
+          peekObjectExpression(value, this->createSymbol(_string));
+        }
+        else if (token.id == tToken::BEGIN_OBJECT) {
+          peekObjectMap(value, this->createSymbol(_string));
+        }
+        else if (_string.symbolic) {
+          value->typeID = TypeID::Symbol;
+          value->_object = this->createSymbol(_string);
+        }
+        else {
+          value->typeID = TypeID::String;
+          value->_object = this->createString(_string);
+        }
+      }break;
+      // Parse Number
     case tToken::NUMBER:
       value->typeID = TypeID::Number;
       value->_number = token._number;
@@ -585,14 +585,14 @@ struct JsonDocumentWriter {
     ObjectMap::iterator it(obj);
     int first = 1;
     if (obj->classname) {
-      if (extended_json) {
+      if(this->classname_property) {
+        out << "{\""<<this->classname_property<<"\":";
+        writeString(obj->classname->buffer, obj->classname->length);
+        first = 0;
+      }
+      else if (extended_json) {
         stringifySymbol(obj->classname);
         out << '{';
-      }
-      else if(this->classname_property) {
-        out << "{\""<<this->classname_property<<"\":";
-        stringifySymbol(obj->classname);
-        first = 0;
       }
       else out << '{';
     }
@@ -620,6 +620,7 @@ struct JsonDocumentWriter {
     out << "]";
   }
   void writeString(const char* buffer, int size) {
+    out << '"';
     for (int i = 0; i < size; i++) {
       char c = buffer[i];
       if (c <= '\\') {
@@ -635,17 +636,37 @@ struct JsonDocumentWriter {
       }
       out << c;
     }
+    out << '"';
   }
   void stringifyString(ObjectString* obj) {
-    out << '"';
     writeString(obj->buffer, obj->length);
-    out << '"';
+  }
+  bool checkSymbolIsStandard(ObjectSymbol* obj) {
+
+    // Check first char
+    char c = obj->buffer[0];
+    bool isStandard = (c>='a'&&c<='z') || (c>='A'&&c<='Z') || (c=='_');
+    if(!isStandard) return false;
+
+    // Check inner char
+    for(int i=1;i<obj->length;i++) {
+      char c = obj->buffer[i];
+      bool isStandard = (c>='a'&&c<='z') || (c>='A'&&c<='Z') || (c>='0' && c<= '9') || (c=='_');
+      if(!isStandard) return false;
+    }
+    return true;
   }
   void stringifySymbol(ObjectSymbol* obj) {
-    if (extended_json) out << '#';
-    out << '"';
+    if (extended_json) {
+      if(this->checkSymbolIsStandard(obj)) {
+        out << obj->buffer;
+        return;
+      }
+      else {
+        out << '#';
+      }
+    }
     writeString(obj->buffer, obj->length);
-    out << '"';
   }
   void stringify(Value& x) {
     switch (x.typeID) {
@@ -701,8 +722,8 @@ struct JSON {
     writer.stringify(x);
     return writer.flush();
   }
-  static std::string stringify_ex(Value &x) {
-    JsonDocumentWriter<true> writer;
+  static std::string stringify_ex(Value &x, const char* classname_property = 0) {
+    JsonDocumentWriter<true> writer(classname_property);
     writer.stringify(x);
     return writer.flush();
   }
