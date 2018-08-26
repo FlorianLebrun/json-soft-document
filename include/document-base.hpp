@@ -41,6 +41,7 @@ struct Value : IValue {
   void set(bool x);
   void set(int64_t x);
   void set(double x);
+  void set(std::string x);
   void set(const char* x, int len = -1);
   void set(Value* x);
   void set_symbol(const char* x, int len = -1);

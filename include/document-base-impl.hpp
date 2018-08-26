@@ -48,6 +48,10 @@ SoftDoc_IMPLn(void) Value::set(double x) {
   this->typeID = TypeID::Number;
   this->_number = x;
 }
+SoftDoc_IMPLn(void) Value::set(std::string x) {
+  this->typeID = TypeID::String;
+  this->_object = (Object*)document->createObjectString(x.c_str(), x.size());
+}
 SoftDoc_IMPLn(void) Value::set(const char* x, int len) {
   this->typeID = TypeID::String;
   this->_object = (Object*)document->createObjectString(x, len < 0 ? strlen(x) : len);
