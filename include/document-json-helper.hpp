@@ -1,4 +1,5 @@
 
+
 class JsonDocumentReader {
 public:
   struct tString {
@@ -699,9 +700,9 @@ struct JsonDocumentWriter {
   std::string flush() {
     std::string tout = this->out.str();
     uint8_t* buffer = (uint8_t*)::malloc((tout.size()+1)*2);
-    EncodingBuffer src((uint8_t*)tout.c_str(), tout.size());
-    EncodingBuffer dst(buffer, (tout.size()+1)*2);
-    if (Ascii_to_Utf8(src, dst)) {
+		SoftDocument::EncodingBuffer src((uint8_t*)tout.c_str(), tout.size());
+		SoftDocument::EncodingBuffer dst(buffer, (tout.size()+1)*2);
+    if (SoftDocument::Ascii_to_Utf8(src, dst)) {
       throw std::exception("encoding overflow");
     }
     dst.start[0] = 0;

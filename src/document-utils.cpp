@@ -1,5 +1,8 @@
 
-#include "../include/document-utils.h"
+#include "../include/document.h"
+typedef SoftDoc<> JSONDoc;
+
+//#include "../include/document-utils.h"
 
 static const uint32_t c_hash31Mask = 0x7fffffff;
 
@@ -38,7 +41,7 @@ static const uint32_t crc32Table[256] = {
    0x79B737BA,0x8BDCB4B9,0x988C474D,0x6AE7C44E,0xBE2DA0A5,0x4C4623A6,0x5F16D052,0xAD7D5351,
 };
 
-uint32_t SoftDoc_Utils::hash_utf8_crc31(uint32_t crc, const void *buf, size_t size)
+uint32_t SoftDocument::hash_utf8_crc31(uint32_t crc, const void *buf, size_t size)
 {
   const uint8_t *p = (const uint8_t*)buf;
   while (size--) {
@@ -84,7 +87,7 @@ static const uint32_t icrc32Table[256] = {
    0x79B737BA,0x8BDCB4B9,0x988C474D,0x6AE7C44E,0xBE2DA0A5,0x4C4623A6,0x5F16D052,0xAD7D5351,
 };
 
-uint32_t SoftDoc_Utils::hash_utf8_icrc31(uint32_t crc, const void *buf, size_t size)
+uint32_t SoftDocument::hash_utf8_icrc31(uint32_t crc, const void *buf, size_t size)
 {
   const uint8_t *p = (const uint8_t*)buf;
   while (size--) {
@@ -94,7 +97,7 @@ uint32_t SoftDoc_Utils::hash_utf8_icrc31(uint32_t crc, const void *buf, size_t s
   return crc & c_hash31Mask;
 }
 
-uint32_t SoftDoc_Utils::hash_murmur3_31(const uint8_t* key, size_t len, uint32_t seed) {
+uint32_t SoftDocument::hash_murmur3_31(const uint8_t* key, size_t len, uint32_t seed) {
   uint32_t h = seed;
   if (len > 3) {
     const uint32_t* key_x4 = (const uint32_t*)key;
@@ -132,7 +135,7 @@ uint32_t SoftDoc_Utils::hash_murmur3_31(const uint8_t* key, size_t len, uint32_t
   return h & c_hash31Mask;
 }
 
-uint32_t SoftDoc_Utils::hash_jenkins_31(const uint8_t* key, size_t length) {
+uint32_t SoftDocument::hash_jenkins_31(const uint8_t* key, size_t length) {
   size_t i = 0;
   uint32_t hash = 0;
   while (i != length) {
