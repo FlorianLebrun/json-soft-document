@@ -1,11 +1,12 @@
 
 #include <stdint.h>
+#include <string.h>
 
 namespace SoftDocument {
   static const void* EndOfPtr = (void*)-1;
   struct base_interface {};
 
-	template <int x>
+	template <intptr_t x>
 	inline static intptr_t alignX(intptr_t offset) {
 		return ((-offset)&(x - 1)) + offset;
 	}
@@ -21,7 +22,7 @@ namespace SoftDocument {
 			this->start = (uint8_t*)buffer;
 			this->end = &((uint8_t*)buffer)[strlen((char*)buffer)];
 		}
-		EncodingBuffer(void* buffer, int size) {
+		EncodingBuffer(void* buffer, size_t size) {
 			this->start = (uint8_t*)buffer;
 			this->end = &((uint8_t*)buffer)[size];
 		}
@@ -38,7 +39,7 @@ namespace SoftDocument {
 	//   0000 0080-0000 07FF | 110xxxxx 10xxxxxx 
 	//   0000 0800-0000 FFFF | 1110xxxx 10xxxxxx 10xxxxxx 
 	//   0001 0000-0010 FFFF | 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-	static int Ascii_to_Utf8(EncodingBuffer& src, EncodingBuffer& dst) {
+	static size_t Ascii_to_Utf8(EncodingBuffer& src, EncodingBuffer& dst) {
 		uint8_t *s = src.start, *s_end = src.end;
 		uint8_t *d = dst.start, *d_end = dst.end - 1;
 		while (s < s_end && d < d_end) {
@@ -53,7 +54,7 @@ namespace SoftDocument {
 		}
 		src.start = s;
 		dst.start = d;
-		return s_end - s;
+		return size_t(s_end - s);
 	}
 
 	//   Char. number range  |        UTF-8 octet sequence 
@@ -63,7 +64,7 @@ namespace SoftDocument {
 	//   0000 0080-0000 07FF | 110xxxxx 10xxxxxx 
 	//   0000 0800-0000 FFFF | 1110xxxx 10xxxxxx 10xxxxxx 
 	//   0001 0000-0010 FFFF | 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-	static int Utf8_to_Ascii(EncodingBuffer& src, EncodingBuffer& dst) {
+	static size_t Utf8_to_Ascii(EncodingBuffer& src, EncodingBuffer& dst) {
 		uint8_t *s = src.start, *s_end = src.end;
 		uint8_t *d = dst.start, *d_end = dst.end;
 		while (s < s_end && d < d_end) {
@@ -97,7 +98,7 @@ namespace SoftDocument {
 		}
 		src.start = s;
 		dst.start = d;
-		return s_end - s;
+		return size_t(s_end - s);
 	}
 	
   uint32_t hash_utf8_crc31(uint32_t crc, const void *buf, size_t size);

@@ -90,9 +90,9 @@ void main() {
   int numProperties = sizeof(propertyNames) / sizeof(char*);
   tSymbol* properties = new tSymbol[numProperties];
   for (int i = 0; i < numProperties; i++) {
-    properties[i].hash = JSONDoc::ObjectSymbol::hash_symbol(propertyNames[i], strlen(propertyNames[i]));
+    properties[i].hash = JSONDoc::ObjectSymbol::hash_symbol(propertyNames[i], (int)strlen(propertyNames[i]));
     properties[i].symbol = propertyNames[i];
-    properties[i].length = strlen(propertyNames[i]);
+    properties[i].length = (int)strlen(propertyNames[i]);
     properties[i].key = doc.createObjectSymbol(propertyNames[i]);
   }
 
@@ -197,7 +197,7 @@ void main() {
     }
     printf("get                    = %5.3g Mops\n", c.GetOpsFloat(count*numProperties, Chrono::Mops));
   }
-  if (0) {
+  if (1) {
     const char* json_test = "{\"someArray\":[\"foo\",\"bar\",123],\"someObject\":{\"foo\":\"bar\",\"embedded\":{\"eleet\":1337}},\"someString\":\"Hithere!\",\"someNumber\":123,\"someBoolean\":true}";
     JSONDoc::Value y(&doc);
     c.Start();

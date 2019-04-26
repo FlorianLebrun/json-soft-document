@@ -8,7 +8,7 @@ template <
 >
 struct SoftDoc {
 
-	static const int DefaultPage_size = 4096;
+	static const size_t DefaultPage_size = 4096;
 
 	struct Document;
 	struct Value;
@@ -136,7 +136,7 @@ struct SoftDoc {
 
 	template <class ValueImpl = Value>
 	struct map_iterator : ObjectMap::iterator {
-		map_iterator(Value* value) : iterator((value->typeID == TypeID::Map) ? value->_map : 0) {
+		map_iterator(Value* value) : ObjectMap::iterator((value->typeID == TypeID::Map) ? value->_map : 0) {
 		}
 		ValueImpl* begin() {
 			if (Property* prop = this->iterator::begin()) return (ValueImpl*)&prop->value;
@@ -154,25 +154,25 @@ struct SoftDoc {
 
 	struct Allocator {
 	public:
-		Allocator(int defaultPageSize = DefaultPage_size);
+		Allocator(size_t defaultPageSize = DefaultPage_size);
 		~Allocator();
-		__forceinline void* alloc(int size);
-		__forceinline void free(void* ptr, int size);
+		__forceinline void* alloc(size_t size);
+		__forceinline void free(void* ptr, size_t size);
 		void clean();
 
 	private:
 		struct tAllocPage {
 			tAllocPage* next;
-			int used;
-			int size;
+			size_t used;
+			size_t size;
 			uint8_t buffer[0];
 		};
 
 		tAllocPage* page;
-		int pageSize;
-		int defaultPageSize;
+		size_t pageSize;
+		size_t defaultPageSize;
 
-		__declspec(noinline) tAllocPage* alloc_page(int size);
+		__declspec(noinline) tAllocPage* alloc_page(size_t size);
 	};
 
 	struct Document : IDocument, Allocator {
@@ -180,25 +180,25 @@ struct SoftDoc {
 		tCharsetType charset;
 		void** hashMapReserve[24];
 
-		Document(tCharsetType charset = tCharsetType::ASCII_charset, int pageSize = DefaultPage_size);
+		Document(tCharsetType charset = tCharsetType::ASCII_charset, size_t pageSize = DefaultPage_size);
 
 		__forceinline void** allocHashMap(int shift);
 		__forceinline void freeHashMap(void** hashmap, int shift);
 
 		__forceinline ObjectMap* createObjectMap();
 		__forceinline ObjectArray* createObjectArray();
-		__forceinline ObjectString* createObjectString(const char* str, int len);
-		__forceinline ObjectSymbol* createObjectSymbol(uint32_t hash, const char* str, int len);
-		__forceinline ObjectSymbol* createObjectSymbol(const char* str, int len);
+		__forceinline ObjectString* createObjectString(const char* str, size_t len);
+		__forceinline ObjectSymbol* createObjectSymbol(uint32_t hash, const char* str, size_t len);
+		__forceinline ObjectSymbol* createObjectSymbol(const char* str, size_t len);
 		__forceinline ObjectSymbol* createObjectSymbol(const char* str);
 		__forceinline ObjectSymbol* createObjectSymbol(ObjectString* str);
 
-		__forceinline Property* createProperty(uint32_t hash, const char* str, int len);
+		__forceinline Property* createProperty(uint32_t hash, const char* str, size_t len);
 		__forceinline Property* createProperty(ObjectSymbol* symbol);
 		__forceinline Value* createValue();
 		__forceinline Item* createItem();
 
-		virtual void* allocValue(int head);
+		virtual void* allocValue(size_t head);
 	};
 
 #  include "document-json-helper.hpp"
@@ -505,13 +505,16 @@ SoftDoc_IMPLn(void) Value::subtract(Value* valueA, Value* valueB)
 }
 
 SoftDoc_IMPLi(ValueMetric) Value::getMetric() {
+	typedef ObjectArray::iterator _array_iterator;
+	typedef ObjectMap::iterator _map_iterator;
+
 	ValueMetric metric;
 	metric.depth = 0;
 	metric.width = 1;
 	switch (this->typeID) {
 	case TypeID::Array:
 	{
-		ObjectArray::iterator it(this->_array);
+		_array_iterator it(this->_array);
 		for (Item* item = it.begin(); item; item = it.next()) {
 			ValueMetric propMetric = item->value.getMetric();
 			if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
@@ -522,7 +525,7 @@ SoftDoc_IMPLi(ValueMetric) Value::getMetric() {
 	}
 	case TypeID::Map:
 	{
-		ObjectMap::iterator it(this->_map);
+		_map_iterator it(this->_map);
 		for (Property* prop = it.begin(); prop; prop = it.next()) {
 			ValueMetric propMetric = prop->value.getMetric();
 			if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
@@ -537,7 +540,7 @@ SoftDoc_IMPLi(ValueMetric) Value::getMetric() {
 
 
 
-SoftDoc_CTOR() Allocator::Allocator(int defaultPageSize) {
+SoftDoc_CTOR() Allocator::Allocator(size_t defaultPageSize) {
 	this->defaultPageSize = defaultPageSize;
 	this->pageSize = defaultPageSize;
 	this->page = 0;
@@ -560,7 +563,7 @@ SoftDoc_IMPLn(void) Allocator::clean() {
 	}
 	this->pageSize = this->defaultPageSize;
 }
-SoftDoc_IMPLi(Allocator::tAllocPage*) Allocator::alloc_page(int size) {
+SoftDoc_IMPLi(Allocator::tAllocPage*) Allocator::alloc_page(size_t size) {
 
 	// When the size is too big, a specific page is create for it
 	if (this->pageSize < (size << 3)) { // limit internal fragmentation to 12.5%
@@ -573,7 +576,7 @@ SoftDoc_IMPLi(Allocator::tAllocPage*) Allocator::alloc_page(int size) {
 	}
 	// Append a new free page
 	else {
-		int buf_size = this->pageSize;
+		size_t buf_size = this->pageSize;
 		tAllocPage* buf = ((tAllocPage*)malloc(sizeof(tAllocPage) + buf_size));
 		memset(buf->buffer, 0, buf_size);
 		buf->size = buf_size;
@@ -584,7 +587,7 @@ SoftDoc_IMPLi(Allocator::tAllocPage*) Allocator::alloc_page(int size) {
 		return buf;
 	}
 }
-SoftDoc_IMPLn(void*) Allocator::alloc(int size) {
+SoftDoc_IMPLn(void*) Allocator::alloc(size_t size) {
 	tAllocPage* buf = this->page;
 	size = SoftDocument::alignPtr(size);
 	if (buf->used + size > buf->size) {
@@ -595,12 +598,12 @@ SoftDoc_IMPLn(void*) Allocator::alloc(int size) {
 	buf->used += size;
 	return ptr;
 }
-SoftDoc_IMPLn(void) Allocator::free(void* ptr, int size) {
+SoftDoc_IMPLn(void) Allocator::free(void* ptr, size_t size) {
 	//::free(ptr);
 }
 
 
-SoftDoc_CTOR() Document::Document(SoftDocument::tCharsetType charset, int pageSize) : Allocator(pageSize) {
+SoftDoc_CTOR() Document::Document(SoftDocument::tCharsetType charset, size_t pageSize) : Allocator(pageSize) {
 	this->charset = charset;
 	memset(this->hashMapReserve, 0, sizeof(this->hashMapReserve));
 }
@@ -627,38 +630,38 @@ SoftDoc_IMPLi(ObjectArray*) Document::createObjectArray() {
 	obj->ObjectArray::ObjectArray();
 	return obj;
 }
-SoftDoc_IMPLi(ObjectString*) Document::createObjectString(const char* str, int len) {
+SoftDoc_IMPLi(ObjectString*) Document::createObjectString(const char* str, size_t len) {
 	ObjectString* obj = (ObjectString*)this->alloc(sizeof(ObjectString) + len);
 	memcpy(obj->buffer, str, len);
 	obj->buffer[len] = 0;
-	obj->length = len;
+	obj->length = (uint32_t)len;
 	return obj;
 }
 SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(const char* str) {
-	int len = strlen(str);
+	size_t len = strlen(str);
 	return this->createObjectSymbol(ObjectSymbol::hash_symbol(str, len), str, len);
 }
-SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(const char* str, int len) {
+SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(const char* str, size_t len) {
 	return this->createObjectSymbol(ObjectSymbol::hash_symbol(str, len), str, len);
 }
 SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(ObjectString* str) {
 	return this->createObjectSymbol(str->buffer, str->length);
 }
-SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(uint32_t hash, const char* str, int len) {
+SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(uint32_t hash, const char* str, size_t len) {
 	ObjectSymbol* obj = (ObjectSymbol*)this->alloc(sizeof(ObjectSymbol) + len);
 	obj->hash = hash;
-	obj->length = len;
+	obj->length = (uint32_t)len;
 	memcpy(obj->buffer, str, len);
 	obj->buffer[len] = 0;
 	return obj;
 }
-SoftDoc_IMPLi(Property*) Document::createProperty(uint32_t hash, const char* str, int len) {
-	int symbol_size = SoftDocument::alignPtr(sizeof(ObjectSymbol) + len);
+SoftDoc_IMPLi(Property*) Document::createProperty(uint32_t hash, const char* str, size_t len) {
+	intptr_t symbol_size = SoftDocument::alignPtr(sizeof(ObjectSymbol) + len);
 	char* buffer = (char*)this->allocValue(symbol_size + sizeof(Property) - sizeof(Value));
 	Property* prop = (Property*)&buffer[symbol_size];
 	ObjectSymbol* key = prop->key = (ObjectSymbol*)&buffer[0];
 	key->hash = hash;
-	key->length = len;
+	key->length = (uint32_t)len;
 	memcpy(key->buffer, str, len);
 	key->buffer[len] = 0;
 	return prop;
@@ -674,7 +677,7 @@ SoftDoc_IMPLi(Item*) Document::createItem() {
 SoftDoc_IMPLi(Value*) Document::createValue() {
 	return (Value*)this->allocValue(0);
 }
-SoftDoc_IMPLn(void*) Document::allocValue(int head) {
+SoftDoc_IMPLn(void*) Document::allocValue(size_t head) {
 	char* buffer = (char*)this->alloc(sizeof(Value) + head);
 	((Value*)&buffer[head])->Value::Value(this);
 	return buffer;

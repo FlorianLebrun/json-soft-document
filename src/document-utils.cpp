@@ -1,8 +1,5 @@
 
-#include "../include/document.h"
-typedef SoftDoc<> JSONDoc;
-
-//#include "../include/document-utils.h"
+#include "../include/document-utils.h"
 
 static const uint32_t c_hash31Mask = 0x7fffffff;
 

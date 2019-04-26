@@ -55,13 +55,13 @@ public:
   tToken token;
   const char* buffer;
   int cursor;
-  int bufferSize;
+	size_t bufferSize;
   int line;
   bool lenient;
 
   Document* document;
 
-  JsonDocumentReader(Document* document, const char* buffer, int bufferSize, const char* classname_property = 0, bool classname_preserve = false) {
+  JsonDocumentReader(Document* document, const char* buffer, size_t bufferSize, const char* classname_property = 0, bool classname_preserve = false) {
     this->document = document;
     this->classname_property = classname_property;
     this->classname_preserve = classname_preserve;
@@ -152,7 +152,7 @@ public:
       }
     }
     *dst = '\0';
-    return dst - buffer;
+    return int(dst - buffer);
   }
   ObjectString* createString(tString& _string) {
     ObjectString* obj = (ObjectString*)document->alloc(sizeof(ObjectString) + _string.len);
@@ -583,7 +583,8 @@ struct JsonDocumentWriter {
     this->classname_property = classname_property;
   }
   void stringifyMap(ObjectMap* obj) {
-    ObjectMap::iterator it(obj);
+		typedef ObjectMap::iterator _map_iterator;
+		_map_iterator it(obj);
     int first = 1;
     if (obj->classname) {
       if(this->classname_property) {
@@ -650,7 +651,7 @@ struct JsonDocumentWriter {
     if(!isStandard) return false;
 
     // Check inner char
-    for(int i=1;i<obj->length;i++) {
+    for(size_t i=1;i<obj->length;i++) {
       char c = obj->buffer[i];
       bool isStandard = (c>='a'&&c<='z') || (c>='A'&&c<='Z') || (c>='0' && c<= '9') || (c=='_');
       if(!isStandard) return false;

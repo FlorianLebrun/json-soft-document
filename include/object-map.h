@@ -390,13 +390,13 @@ namespace SoftDocument {
 			document->freeHashMap((void**)old_map, old_shift);
 		}
 		Property* map(const char* symbol, Document* document) {
-			int symbolLen = strlen(symbol);
+			size_t symbolLen = strlen(symbol);
 			return this->map(ObjectSymbol::hash_symbol(symbol, symbolLen), symbol, symbolLen, document);
 		}
-		Property* map(const char* symbol, int symbolLen, Document* document) {
+		Property* map(const char* symbol, size_t symbolLen, Document* document) {
 			return this->map(ObjectSymbol::hash_symbol(symbol, symbolLen), symbol, symbolLen, document);
 		}
-		Property* map(uint32_t hash, const char* buffer, int length, Document* document) {
+		Property* map(uint32_t hash, const char* buffer, size_t length, Document* document) {
 
 			// Resize when hashmap too small
 			if (this->limit <= 0) {
