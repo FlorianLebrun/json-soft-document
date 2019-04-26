@@ -414,7 +414,7 @@ SoftDoc_IMPLn(void) Document::freeHashMap(void** hashmap, int shift) {
 SoftDoc_IMPLi(ObjectMap*) Document::createObjectMap() {
   int _size = sizeof(ObjectMap);
   ObjectMap* obj = (ObjectMap*)this->alloc(_size);
-  obj->ObjectMap::ObjectMap();
+  obj->ObjectMap::ObjectMapBase<orderedMap>();
   return obj;
 }
 SoftDoc_IMPLi(ObjectArray*) Document::createObjectArray() {

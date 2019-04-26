@@ -26,10 +26,10 @@
     <ClInclude Include="../include/document-base.hpp" />
     <ClInclude Include="../include/document-encoding.hpp" />
     <ClInclude Include="../include/document-json-helper.hpp" />
-    <ClInclude Include="../include/document-object-array.h" />
-    <ClInclude Include="../include/document-object-expression.h" />
-    <ClInclude Include="../include/document-object-map.h" />
     <ClInclude Include="../include/document.h" />
+    <ClInclude Include="..\include\document-object-array.h" />
+    <ClInclude Include="..\include\document-object-expression.h" />
+    <ClInclude Include="..\include\document-object-map.h" />
     <ClInclude Include="..\include\document-object-string.h" />
     <ClInclude Include="..\include\document-object-symbol.h" />
     <ClInclude Include="..\include\document-utils.h" />
@@ -41,34 +41,34 @@
     <ProjectGuid>{2731AB96-EECB-41A0-9EA4-E27A3C9B205D}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>json-soft-document</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

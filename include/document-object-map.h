@@ -158,6 +158,17 @@ struct ObjectMapBase<true> : Object {
     }
     return 0;
   }
+	void print() {
+		uint32_t prevHash = 0;
+		for (Property** hashmap = this->hashmap; hashmap[0] != EndOfPtr; hashmap++) {
+			Property* cur = hashmap[0];
+			while (cur) {
+				printf("%.10u %s (delta %d)\n", cur->key->hash, cur->key->buffer, int(cur->key->hash) >= int(prevHash) ? 1 : 0);
+				prevHash = cur->key->hash;
+				cur = cur->next;
+			}
+		}
+	}
 };
 
 template <>
@@ -424,16 +435,5 @@ struct ObjectMapBase<false> : Object {
   }
 };
 
-struct ObjectMap : public ObjectMapBase<orderedMap> {
-  void print() {
-    uint32_t prevHash = 0;
-    for (Property** hashmap = this->hashmap; hashmap[0] != EndOfPtr; hashmap++) {
-      Property* cur = hashmap[0];
-      while (cur) {
-        printf("%.10u %s (delta %d)\n", cur->key->hash, cur->key->buffer, int(cur->key->hash) >= int(prevHash) ? 1 : 0);
-        prevHash = cur->key->hash;
-        cur = cur->next;
-      }
-    }
-  }
-};
+typedef ObjectMapBase<orderedMap> ObjectMap;
+
