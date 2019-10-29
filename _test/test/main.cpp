@@ -11,7 +11,7 @@
 typedef std::pair<uint32_t, const char*> t_pair;
 
 void test_stringify() {
-  typedef SoftDoc<> JSONDoc;
+  typedef SoftDocument::Template<> JSONDoc;
 
   JSONDoc::Document doc;
   JSONDoc::Value x(&doc);
@@ -27,7 +27,7 @@ void test_stringify() {
 }
 
 void test_parse() {
-  typedef SoftDoc<> JSONDoc;
+  typedef SoftDocument::Template<> JSONDoc;
   JSONDoc::Document doc;
 
   const char* y_txt = "{\"d\":[\"x\\\"\",\"y\",\"z\",30],\"a\":5,\"b\":5.6,\"c\":{\"__classname\":\"MyClass\",\"hello\":9,}}";
@@ -39,7 +39,7 @@ void test_parse() {
 }
 
 void test_substract() {
-  typedef SoftDoc<> JSONDoc;
+  typedef SoftDocument::Template<> JSONDoc;
   JSONDoc::Document doc;
 
   JSONDoc::Value x(&doc);
@@ -75,7 +75,7 @@ const char* propertyNames[] = {
 };
 
 void main() {
-  typedef SoftDoc<> JSONDoc;
+  typedef SoftDocument::Template<> JSONDoc;
 
   JSONDoc::Document doc;
   Chrono c;
@@ -93,7 +93,7 @@ void main() {
     properties[i].hash = JSONDoc::ObjectSymbol::hash_symbol(propertyNames[i], (int)strlen(propertyNames[i]));
     properties[i].symbol = propertyNames[i];
     properties[i].length = (int)strlen(propertyNames[i]);
-    properties[i].key = doc.createObjectSymbol(propertyNames[i]);
+    properties[i].key = doc.createObjectSymbol(propertyNames[i], strlen(propertyNames[i]));
   }
 
   if (1) {
@@ -183,7 +183,7 @@ void main() {
     JSONDoc::ObjectMap obj;
     for (int i = 0; i < numProperties; i++) {
       tSymbol& s = properties[i];
-      obj.map(s.symbol, &doc)->value = 0;
+      obj.map(s.hash, s.symbol, s.length, &doc)->value = 0;
     }
 
     c.Start();

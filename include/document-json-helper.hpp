@@ -5,7 +5,7 @@ public:
   struct tString {
     bool symbolic;
     const char*ptr;
-    int len;
+    size_t len;
     inline bool equals(const char* str) {
       return !strncmp(ptr, str, len);
     }
@@ -53,7 +53,7 @@ public:
 
   tToken token;
   const char* buffer;
-  int cursor;
+  size_t cursor;
   size_t bufferSize;
   int line;
   bool lenient;
@@ -167,7 +167,7 @@ public:
   }
 
   void peekString(char endchar) {
-    int start = cursor;
+    size_t start = cursor;
     while (cursor < bufferSize) {
       if (buffer[cursor] == '\\') {
         cursor++;
@@ -184,7 +184,7 @@ public:
     if (cursor < bufferSize) cursor++;
   }
   void peekSymbol() {
-    int start = cursor;
+    size_t start = cursor;
     while (cursor < bufferSize) {
       char c = buffer[cursor];
       uint8_t cdef = char_def[c];

@@ -1,13 +1,12 @@
 
-
 namespace SoftDocument {
   template <
     bool caseInsensitive = false,
     bool orderedMap = false,
-  class IDocument = SoftDocument::base_interface,
-  class IValue = SoftDocument::base_interface
+    class IDocument = SoftDocument::base_interface,
+    class IValue = SoftDocument::base_interface
   >
-  struct Template {
+    struct Template {
 
     static const size_t DefaultPage_size = 4096;
 
@@ -104,7 +103,7 @@ namespace SoftDocument {
       operator double() const { return this->toNumber(); }
       operator const char*() const { return this->toString().c_str(); }
       operator std::string() const { return this->toString().c_str(); }
-      
+
       bool operator = (bool x) { this->set(bool(x)); return x; }
       int operator = (int8_t x) { this->set(int64_t(x)); return x; }
       int operator = (int16_t x) { this->set(int64_t(x)); return x; }
@@ -171,12 +170,14 @@ namespace SoftDocument {
       void clean();
 
     private:
+#pragma warning( disable : 4200 )
       struct tAllocPage {
         tAllocPage* next;
         size_t used;
         size_t size;
         uint8_t buffer[0];
       };
+#pragma warning( default : 4200 )
 
       tAllocPage* page;
       size_t pageSize;
@@ -211,8 +212,8 @@ namespace SoftDocument {
     };
 
 #  include "document-json-helper.hpp"
-  };
 
+  };
 #define SoftDoc_TEMPLATE_DECL template<bool caseInsensitive,bool orderedMap,class IDocument,class IValue>
 #define SoftDoc_TEMPLATE_PREFIX Template<caseInsensitive,orderedMap,IDocument,IValue>
 #define SoftDoc_CTOR()     SoftDoc_TEMPLATE_DECL inline SoftDoc_TEMPLATE_PREFIX::
@@ -282,7 +283,7 @@ namespace SoftDocument {
     this->_map->classname = document->createObjectSymbol(classname, len < 0 ? strlen(classname) : len);
   }
   SoftDoc_IMPLn(void) Value::set(Value* x) {
-    if(x) {
+    if (x) {
       this->typeID = x->typeID;
       this->_bits = x->_bits;
     }
@@ -532,27 +533,27 @@ namespace SoftDocument {
     metric.width = 1;
     switch (this->typeID) {
     case TypeID::Array:
-      {
-        _array_iterator it(this->_array);
-        for (Item* item = it.begin(); item; item = it.next()) {
-          ValueMetric propMetric = item->value.getMetric();
-          if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
-          metric.width += metric.width;
-        }
-        metric.depth++;
-        return metric;
+    {
+      _array_iterator it(this->_array);
+      for (Item* item = it.begin(); item; item = it.next()) {
+        ValueMetric propMetric = item->value.getMetric();
+        if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
+        metric.width += metric.width;
       }
+      metric.depth++;
+      return metric;
+    }
     case TypeID::Map:
-      {
-        _map_iterator it(this->_map);
-        for (Property* prop = it.begin(); prop; prop = it.next()) {
-          ValueMetric propMetric = prop->value.getMetric();
-          if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
-          metric.width += metric.width;
-        }
-        metric.depth++;
-        return metric;
+    {
+      _map_iterator it(this->_map);
+      for (Property* prop = it.begin(); prop; prop = it.next()) {
+        ValueMetric propMetric = prop->value.getMetric();
+        if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
+        metric.width += metric.width;
       }
+      metric.depth++;
+      return metric;
+    }
     }
     return metric;
   }
