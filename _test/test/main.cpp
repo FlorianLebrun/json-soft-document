@@ -8,7 +8,7 @@
 #include "chrono.h"
 #include "stl_alloc.h"
 
-typedef std::pair<uint32_t, const char*> t_pair;
+typedef std::pair<const char*, int> t_pair;
 
 void test_stringify() {
   typedef SoftDocument::Template<> JSONDoc;
@@ -23,6 +23,7 @@ void test_stringify() {
   x["d"].push_back() = "z";
   printf("stringify x: %s\n", JSONDoc::JSON::stringify(x).c_str());
 
+  doc.printDictionary();
   // Result: stringify x: {"b":5.6,"d":["x\nr","y","z"],"a":5,"c":{"h├®llo":9}}
 }
 
@@ -33,7 +34,7 @@ void test_parse() {
   const char* y_txt = "{\"d\":[\"x\\\"\",\"y\",\"z\",30],\"a\":5,\"b\":5.6,\"c\":{\"__classname\":\"MyClass\",\"hello\":9,}}";
   JSONDoc::Value y(&doc);
   JSONDoc::JSON::parse(y, y_txt, 0, "__classname");
-  printf("stringify y: %s\n", JSONDoc::JSON::stringify(y, "className").c_str());
+  printf("stringify y: %s\n", JSONDoc::JSON::stringify(y, true, "className").c_str());
 
   // Result: stringify y: {"b":5.6,"d":["x\"","y","z",30],"a":5,"c":{"className":"MyClass","hello":9}}
 }
@@ -60,6 +61,10 @@ void test_substract() {
   y["d"].push_back() = "y";
   y["d"].push_back() = "z";
 
+  x.className();
+  x.equals(&y);
+  doc.createValue()->duplicate(&y);
+
   JSONDoc::Value z(&doc);
   z.subtract(&x, &y);
   printf("stringify z: %s\n", JSONDoc::JSON::stringify(z).c_str());
@@ -67,68 +72,56 @@ void test_substract() {
   // Result: stringify z: {"c":{"v":9}}
 }
 
-const char* propertyNames[] = {
-   "Build","PPC","keyword","lists","using","our","free","SEO",
-   "and","SEM","keyword","list","generatory.","This","open",
-   "source","tool","can","be","used","to","help","you","build",
-   "a","list","of","relevant","keywords"
-};
-
-void main() {
+/*
+void test_perf() {
+  static const char* propertyNames[] = {
+     "Build","PPC","keyword","lists","using","our","free","SEO",
+     "and","SEM","keyword","list","generatory.","This","open",
+     "source","tool","can","be","used","to","help","you","build",
+     "a","list","of","relevant","keywords"
+  };
   typedef SoftDocument::Template<> JSONDoc;
-
   JSONDoc::Document doc;
   Chrono c;
   int count = 10000;
 
   struct tSymbol {
-    uint32_t hash;
     const char* symbol;
     int length;
-    JSONDoc::ObjectSymbol* key;
   };
   int numProperties = sizeof(propertyNames) / sizeof(char*);
   tSymbol* properties = new tSymbol[numProperties];
   for (int i = 0; i < numProperties; i++) {
-    properties[i].hash = JSONDoc::ObjectSymbol::hash_symbol(propertyNames[i], (int)strlen(propertyNames[i]));
     properties[i].symbol = propertyNames[i];
     properties[i].length = (int)strlen(propertyNames[i]);
-    properties[i].key = doc.createObjectSymbol(propertyNames[i], strlen(propertyNames[i]));
   }
 
-  if (1) {
+  // Test std::map performance
+  if (0) {
     c.Start();
     for (int k = 0; k < count; k++) {
-      std::map<uint32_t, const char*, std::less<uint32_t>, StackAllocator<t_pair> > obj;
+      std::map<const char*, int, std::less<const char*>, StackAllocator<t_pair> > obj;
       for (int i = 0; i < numProperties; i++) {
         tSymbol& s = properties[i];
-        obj.insert(t_pair(s.hash, s.symbol));
+        obj.insert(t_pair(s.symbol, i));
       }
     }
     printf("std::map               = %5.3g Mops\n", c.GetOpsFloat(count*numProperties, Chrono::Mops));
   }
-  if (1) {
+  // Test std::unordered_map performance
+  if (0) {
     c.Start();
     for (int k = 0; k < count; k++) {
-      std::unordered_map<uint32_t, const char*, std::hash<uint32_t>, std::equal_to<uint32_t>, StackAllocator<t_pair> > obj;
+      std::unordered_map<const char*, int, std::equal_to<const char*>, StackAllocator<t_pair> > obj;
       for (int i = 0; i < numProperties; i++) {
         tSymbol& s = properties[i];
-        obj.insert(t_pair(s.hash, s.symbol));
+        obj.insert(t_pair(s.symbol, i));
       }
     }
     printf("std::unordered_map     = %5.3g Mops\n", c.GetOpsFloat(count*numProperties, Chrono::Mops));
   }
-  if (1) {
-    c.Start();
-    for (int k = 0; k < count; k++) {
-      for (int i = 0; i < numProperties; i++) {
-        tSymbol& s = properties[i];
-        doc.alloc(s.length);
-      }
-    }
-    printf("alloc                  = %5.3g Mops\n", c.GetOpsFloat(count*numProperties, Chrono::Mops));
-  }
-  if (1) {
+  // Test allocValue performance
+  if (0) {
     c.Start();
     for (int k = 0; k < count; k++) {
       for (int i = 0; i < numProperties; i++) {
@@ -138,12 +131,13 @@ void main() {
     }
     printf("allocValue             = %5.3g Mops\n", c.GetOpsFloat(count*numProperties, Chrono::Mops));
   }
-  if (1) {
+  // Test createSymbol performance
+  if (0) {
     c.Start();
     for (int k = 0; k < count; k++) {
       for (int i = 0; i < numProperties; i++) {
         tSymbol& s = properties[i];
-        doc.createObjectSymbol(s.hash, s.symbol, s.length);
+        doc.createSymbol(s.symbol, s.length);
       }
     }
     printf("createSymbol           = %5.3g Mops\n", c.GetOpsFloat(count*numProperties, Chrono::Mops));
@@ -191,7 +185,6 @@ void main() {
       for (int i = 0; i < numProperties; i++) {
         tSymbol& s = properties[i];
         JSONDoc::Value& y = obj.map(s.hash, s.symbol, s.length, &doc)->value;
-        //Value& y = obj.map2(s.key, &doc)->value;
         y._integer++;
       }
     }
@@ -206,10 +199,13 @@ void main() {
     }
     printf("JSON::parse            = %5.3g Mops\n", c.GetOpsFloat(count, Chrono::Mops));
   }
-  if (1) {
-    test_stringify();
-    test_parse();
-    test_substract();
-  }
+}*/
+
+void main() {
+  printf("---- Begin JSON Test----\n");
+  test_stringify();
+  test_parse();
+  test_substract();
+  printf("---- End JSON Test----\n");
   getchar();
 }

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets">
     <Import Project="$(SolutionDir)projects.props" />
   </ImportGroup>
@@ -30,7 +30,7 @@
     <ClInclude Include="stl_alloc.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\_project\json-soft-document.vcxproj">
+    <ProjectReference Include="..\..\_project\json-soft-document_vs11.vcxproj">
       <Project>{2731ab96-eecb-41a0-9ea4-e27a3c9b205d}</Project>
     </ProjectReference>
   </ItemGroup>
@@ -50,7 +50,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v110</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">

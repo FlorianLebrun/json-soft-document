@@ -3,27 +3,27 @@ namespace SoftDocument {
   template <
     bool caseInsensitive = false,
     bool orderedMap = false,
-    class IDocument = SoftDocument::base_interface,
-    class IValue = SoftDocument::base_interface
+  class IDocument = SoftDocument::base_interface,
+  class IValue = SoftDocument::base_interface
   >
-    struct Template {
+  struct Template {
 
     static const size_t DefaultPage_size = 4096;
 
     struct Document;
     struct Value;
+    struct Symbol;
 
     typedef SoftDocument::TypeID TypeID;
     typedef SoftDocument::tCharsetType tCharsetType;
 
     typedef SoftDocument::Object Object;
     typedef SoftDocument::ObjectString ObjectString;
-    typedef SoftDocument::ObjectSymbol<caseInsensitive> ObjectSymbol;
     typedef SoftDocument::ObjectArray<Document, Value> ObjectArray;
     typedef SoftDocument::Item<Document, Value> Item;
-    typedef SoftDocument::ObjectMap<Document, Value, ObjectSymbol, orderedMap> ObjectMap;
-    typedef SoftDocument::Property<Document, Value, ObjectSymbol> Property;
-    typedef SoftDocument::ObjectExpression<Document, Value, ObjectSymbol> ObjectExpression;
+    typedef SoftDocument::ObjectMap<Document, Value, Symbol, orderedMap> ObjectMap;
+    typedef SoftDocument::Property<Document, Value, Symbol> Property;
+    typedef SoftDocument::ObjectExpression<Document, Value, ObjectString> ObjectExpression;
 
     struct ValueMetric {
       int depth;
@@ -41,16 +41,25 @@ namespace SoftDocument {
         ObjectArray* _array;
         ObjectExpression* _expression;
         ObjectString* _string;
-        ObjectSymbol* _symbol;
         Object* _object;
       };
       TypeID typeID;
 
       Value(Document* document);
 
-      void undefine();
+      bool is_defined() { return this->typeID != TypeID::Undefined; }
+      bool is_undefined() { return this->typeID == TypeID::Undefined; }
+      bool is_boolean() { return this->typeID == TypeID::Boolean; }
+      bool is_integer() { return this->typeID == TypeID::Integer; }
+      bool is_number() { return this->typeID == TypeID::Number || this->typeID == TypeID::Integer; }
+      bool is_map() { return this->typeID == TypeID::Map; }
+      bool is_array() { return this->typeID == TypeID::Array; }
+      bool is_string() { return this->typeID == TypeID::String; }
+      bool is_symbol() { return this->typeID == TypeID::Symbol; }
+      bool is_null() { return this->typeID == TypeID::Null; }
+
       void set(TypeID typeID);
-      void set(bool x);
+      void set(bool x) { this->typeID = TypeID::Boolean; this->_boolean = x; }
       void set(uint8_t x) { this->set(int64_t(x)); }
       void set(uint16_t x) { this->set(int64_t(x)); }
       void set(uint32_t x) { this->set(int64_t(x)); }
@@ -58,20 +67,21 @@ namespace SoftDocument {
       void set(int8_t x) { this->set(int64_t(x)); }
       void set(int16_t x) { this->set(int64_t(x)); }
       void set(int32_t x) { this->set(int64_t(x)); }
-      void set(int64_t x);
-      void set(double x);
+      void set(int64_t x) { this->typeID = TypeID::Integer; this->_integer = x; }
+      void set(double x) { this->typeID = TypeID::Number; this->_number = x; }
       void set(std::string x);
-      void set(const char* x, int len = -1);
       void set(Value* x);
-      void set_symbol(const char* x, int len = -1);
-      void set_map(const char* classname, int len = -1);
+      void set(const char* x, size_t len = 0);
+      void set_symbol(const char* x, size_t len = 0);
+      void set_undefined() { this->typeID = TypeID::Undefined;this->_bits = 0; }
 
-      ObjectSymbol* className();
+      Value* className();
 
-      Value& map(ObjectSymbol* key);
-      Value& map(const char* key, int len = -1);
-      Value* find(const char* key, int len = -1);
-      Value* findAt(const char* key, int len = -1);
+      Value& map(Symbol* key);
+      Value& map(const char* key, size_t len = 0);
+      Value* find(Symbol* key);
+      Value* find(const char* key, size_t len = 0);
+      Value* findAt(const char* key, size_t len = 0);
 
       Value& get(intptr_t index);
       Value& push_front();
@@ -126,6 +136,37 @@ namespace SoftDocument {
       ValueMetric getMetric();
     };
 
+    struct Symbol: SymbolBase<caseInsensitive> {
+      uint32_t hash;
+      Symbol* ns;
+      Value name;
+
+      inline bool equals(Symbol* other) {
+        if (this->hash != other->hash) return false;
+        if (this->name._string->length != other->name._string->length) return false;
+        return !this->compare_bytes(this->name._string->buffer, other->name._string->buffer, this->name._string->length);
+      }
+      inline bool equals(const char* buffer) {
+        if (this->length != strlen(buffer)) return false;
+        return !this->compare_bytes(this->buffer, buffer, this->length);
+      }
+      inline int compare(uint32_t hash, const char* buffer, size_t length) {
+        ObjectString* name = this->name._string;
+        int32_t c = int32_t(this->hash - hash);
+        if (!c) {
+          c = int32_t(name->length - length);
+          if (!c) {
+            c = this->compare_bytes(name->buffer, buffer, length);
+          }
+        }
+        return c;
+      }
+      inline int compare(Symbol* other) {
+        ObjectString* other_name = other->name._string;
+        return this->compare(other->hash, other_name->buffer, other_name->length);
+      }
+    };
+
     template <class ValueImpl = Value>
     struct array_iterator {
       Item* item;
@@ -155,7 +196,7 @@ namespace SoftDocument {
         if (Property* prop = this->iterator::next()) return (ValueImpl*)&prop->value;
         else return 0;
       }
-      ObjectSymbol* key() {
+      ObjectString* key() {
         _ASSERT(this->cproperty != 0);
         return this->cproperty->key;
       }
@@ -190,25 +231,31 @@ namespace SoftDocument {
 
       tCharsetType charset;
       void** hashMapReserve[24];
+      std::map<uint32_t, Symbol*> symbols;
+
+      Symbol* className_symbol;
 
       Document(tCharsetType charset = tCharsetType::ASCII_charset, size_t pageSize = DefaultPage_size);
 
       __forceinline void** allocHashMap(int shift);
       __forceinline void freeHashMap(void** hashmap, int shift);
 
+      Symbol* _lookup_symbol(uint32_t hash, const char* str, size_t len, Symbol* ns);
+      Symbol* createSymbol(const char* str, size_t len, Symbol* ns = 0);
+      Symbol* getSymbol(const char* str, size_t len, Symbol* ns = 0);
+      Symbol* mapSymbol(const char* str, size_t len, Symbol* ns = 0);
+
       __forceinline ObjectMap* createObjectMap();
       __forceinline ObjectArray* createObjectArray();
       __forceinline ObjectString* createObjectString(const char* str, size_t len);
-      __forceinline ObjectSymbol* createObjectSymbol(uint32_t hash, const char* str, size_t len);
-      __forceinline ObjectSymbol* createObjectSymbol(const char* str, size_t len);
-      __forceinline ObjectSymbol* createObjectSymbol(ObjectString* str);
 
-      __forceinline Property* createProperty(uint32_t hash, const char* str, size_t len);
-      __forceinline Property* createProperty(ObjectSymbol* symbol);
+      __forceinline Property* createProperty(Symbol* symbol);
       __forceinline Value* createValue();
       __forceinline Item* createItem();
 
       virtual void* allocValue(size_t head);
+
+      void printDictionary();
     };
 
 #  include "document-json-helper.hpp"
@@ -222,10 +269,6 @@ namespace SoftDocument {
 
   SoftDoc_CTOR() Value::Value(Document* document) {
     this->document = document;
-    this->typeID = TypeID::Undefined;
-    this->_bits = 0;
-  }
-  SoftDoc_IMPLn(void) Value::undefine() {
     this->typeID = TypeID::Undefined;
     this->_bits = 0;
   }
@@ -251,36 +294,17 @@ namespace SoftDocument {
       this->_bits = 0;
     }
   }
-  SoftDoc_IMPLn(void) Value::set(bool x) {
-    this->typeID = TypeID::Boolean;
-    this->_boolean = x;
-  }
-  SoftDoc_IMPLn(void) Value::set(int64_t x) {
-    this->typeID = TypeID::Integer;
-    this->_integer = x;
-  }
-  SoftDoc_IMPLn(void) Value::set(double x) {
-    this->typeID = TypeID::Number;
-    this->_number = x;
-  }
   SoftDoc_IMPLn(void) Value::set(std::string x) {
     this->typeID = TypeID::String;
     this->_object = (Object*)document->createObjectString(x.c_str(), x.size());
   }
-  SoftDoc_IMPLn(void) Value::set(const char* x, int len) {
+  SoftDoc_IMPLn(void) Value::set(const char* x, size_t len) {
     this->typeID = TypeID::String;
-    this->_object = (Object*)document->createObjectString(x, len < 0 ? strlen(x) : len);
+    this->_object = (Object*)document->createObjectString(x, len ? len : strlen(x) );
   }
-  SoftDoc_IMPLn(void) Value::set_symbol(const char* x, int len) {
-    if (len < 0) len = strlen(x);
+  SoftDoc_IMPLn(void) Value::set_symbol(const char* x, size_t len) {
     this->typeID = TypeID::Symbol;
-    this->_object = (Object*)document->createObjectSymbol(x, len < 0 ? strlen(x) : len);
-  }
-  SoftDoc_IMPLn(void) Value::set_map(const char* classname, int len) {
-    if (this->typeID != TypeID::Map) {
-      this->set(TypeID::Map);
-    }
-    this->_map->classname = document->createObjectSymbol(classname, len < 0 ? strlen(classname) : len);
+    this->_object = (Object*)document->createObjectString(x, len ? len : strlen(x) );
   }
   SoftDoc_IMPLn(void) Value::set(Value* x) {
     if (x) {
@@ -360,43 +384,47 @@ namespace SoftDocument {
     case TypeID::String:
       return this->_string->buffer;
     case TypeID::Symbol:
-      return this->_symbol->buffer;
+      return this->_string->buffer;
     default:
       return defaultValue;
     }
   }
 
-  SoftDoc_IMPLi(ObjectSymbol*) Value::className() {
-    if (this->typeID == TypeID::Map) {
-      return this->_map->classname;
-    }
-    return 0;
+  SoftDoc_IMPLi(Value*) Value::className() {
+    return this->find(this->document->className_symbol);
   }
-  SoftDoc_IMPLi(Value&) Value::map(ObjectSymbol* key) {
+  SoftDoc_IMPLi(Value&) Value::map(Symbol* key) {
     if (this->typeID != TypeID::Map) {
       this->typeID = TypeID::Map;
       this->_map = this->document->createObjectMap();
     }
     return this->_map->map(key, this->document)->value;
   }
-  SoftDoc_IMPLi(Value&) Value::map(const char* key, int len) {
+  SoftDoc_IMPLi(Value&) Value::map(const char* key, size_t len) {
     if (this->typeID != TypeID::Map) {
       this->typeID = TypeID::Map;
       this->_map = this->document->createObjectMap();
     }
-    ObjectSymbol* symbol = this->document->createObjectSymbol(key, len < 0 ? strlen(key) : len);
+    Symbol* symbol = this->document->mapSymbol(key, len ? len : strlen(key) );
     return this->_map->map(symbol, this->document)->value;
   }
-  SoftDoc_IMPLi(Value*) Value::find(const char* key, int len) {
+  SoftDoc_IMPLi(Value*) Value::find(Symbol* key) {
     if (this->typeID == TypeID::Map) {
-      Property* found = this->_map->find(key, len < 0 ? strlen(key) : len);
+      Property* found = this->_map->find(key);
       if (found && found->value.typeID != TypeID::Undefined) {
         return &found->value;
       }
     }
     return 0;
   }
-  SoftDoc_IMPLi(Value*) Value::findAt(const char* key, int len) {
+  SoftDoc_IMPLi(Value*) Value::find(const char* key, size_t len) {
+    if (this->typeID == TypeID::Map) {
+      Symbol* symbol = this->document->getSymbol(key, len ? len : strlen(key) );
+      if (symbol) return this->find(symbol);
+    }
+    return 0;
+  }
+  SoftDoc_IMPLi(Value*) Value::findAt(const char* key, size_t len) {
     throw "@TODO";
   }
   SoftDoc_IMPLi(Value&) Value::get(intptr_t index) {
@@ -432,7 +460,7 @@ namespace SoftDocument {
       case TypeID::Map:
         return this->_map->equals(other->_map);
       case TypeID::Symbol:
-        return this->_symbol->equals(other->_symbol);
+        return this->_string->equals(other->_string);
       case TypeID::String:
         return this->_string->equals(other->_string);
       case TypeID::Boolean:
@@ -480,7 +508,6 @@ namespace SoftDocument {
       break;
     case TypeID::Map:
       this->_map = this->document->createObjectMap();
-      this->_map->classname = src->_map->classname;
       break;
     default:
       this->_bits = src->_bits;
@@ -506,7 +533,7 @@ namespace SoftDocument {
           return;
         } break;
       case TypeID::Symbol:
-        if (!valueA->_symbol->equals(valueB->_symbol)) {
+        if (!valueA->_string->equals(valueB->_string)) {
           this->set(valueA);
           return;
         } break;
@@ -533,27 +560,27 @@ namespace SoftDocument {
     metric.width = 1;
     switch (this->typeID) {
     case TypeID::Array:
-    {
-      _array_iterator it(this->_array);
-      for (Item* item = it.begin(); item; item = it.next()) {
-        ValueMetric propMetric = item->value.getMetric();
-        if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
-        metric.width += metric.width;
+      {
+        _array_iterator it(this->_array);
+        for (Item* item = it.begin(); item; item = it.next()) {
+          ValueMetric propMetric = item->value.getMetric();
+          if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
+          metric.width += metric.width;
+        }
+        metric.depth++;
+        return metric;
       }
-      metric.depth++;
-      return metric;
-    }
     case TypeID::Map:
-    {
-      _map_iterator it(this->_map);
-      for (Property* prop = it.begin(); prop; prop = it.next()) {
-        ValueMetric propMetric = prop->value.getMetric();
-        if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
-        metric.width += metric.width;
+      {
+        _map_iterator it(this->_map);
+        for (Property* prop = it.begin(); prop; prop = it.next()) {
+          ValueMetric propMetric = prop->value.getMetric();
+          if (propMetric.depth > metric.depth) metric.depth = propMetric.depth;
+          metric.width += metric.width;
+        }
+        metric.depth++;
+        return metric;
       }
-      metric.depth++;
-      return metric;
-    }
     }
     return metric;
   }
@@ -625,6 +652,7 @@ namespace SoftDocument {
 
   SoftDoc_CTOR() Document::Document(SoftDocument::tCharsetType charset, size_t pageSize) : Allocator(pageSize) {
     this->charset = charset;
+    this->className_symbol = this->createSymbol("classname", 0);
     memset(this->hashMapReserve, 0, sizeof(this->hashMapReserve));
   }
   SoftDoc_IMPLn(void**) Document::allocHashMap(int shift) {
@@ -657,32 +685,7 @@ namespace SoftDocument {
     obj->length = (uint32_t)len;
     return obj;
   }
-  SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(const char* str, size_t len) {
-    return this->createObjectSymbol(ObjectSymbol::hash_symbol(str, len), str, len);
-  }
-  SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(ObjectString* str) {
-    return this->createObjectSymbol(str->buffer, str->length);
-  }
-  SoftDoc_IMPLi(ObjectSymbol*) Document::createObjectSymbol(uint32_t hash, const char* str, size_t len) {
-    ObjectSymbol* obj = (ObjectSymbol*)this->alloc(sizeof(ObjectSymbol) + len);
-    obj->hash = hash;
-    obj->length = (uint32_t)len;
-    memcpy(obj->buffer, str, len);
-    obj->buffer[len] = 0;
-    return obj;
-  }
-  SoftDoc_IMPLi(Property*) Document::createProperty(uint32_t hash, const char* str, size_t len) {
-    intptr_t symbol_size = SoftDocument::alignPtr(sizeof(ObjectSymbol) + len);
-    char* buffer = (char*)this->allocValue(symbol_size + sizeof(Property) - sizeof(Value));
-    Property* prop = (Property*)&buffer[symbol_size];
-    ObjectSymbol* key = prop->key = (ObjectSymbol*)&buffer[0];
-    key->hash = hash;
-    key->length = (uint32_t)len;
-    memcpy(key->buffer, str, len);
-    key->buffer[len] = 0;
-    return prop;
-  }
-  SoftDoc_IMPLi(Property*) Document::createProperty(ObjectSymbol* key) {
+  SoftDoc_IMPLi(Property*) Document::createProperty(Symbol* key) {
     Property* prop = (Property*)this->allocValue(sizeof(Property) - sizeof(Value));
     prop->key = key;
     return prop;
@@ -697,5 +700,44 @@ namespace SoftDocument {
     char* buffer = (char*)this->alloc(sizeof(Value) + head);
     ((Value*)&buffer[head])->Value::Value(this);
     return buffer;
+  }
+  SoftDoc_IMPLi(Symbol*) Document::_lookup_symbol(uint32_t hash, const char* str, size_t len, Symbol* ns) {
+    for(std::map<uint32_t,Symbol*>::iterator it=this->symbols.find(hash);it!=this->symbols.end();it++) {
+      if(!it->second->compare(hash, str, len)) {
+        return it->second;
+      }
+    }
+    return 0;
+  }
+  SoftDoc_IMPLi(Symbol*) Document::getSymbol(const char* str, size_t len, Symbol* ns) {
+    uint32_t hash = Symbol::hash_symbol(str, len);
+    return this->_lookup_symbol(hash, str, len, ns);
+  }
+  SoftDoc_IMPLi(Symbol*) Document::mapSymbol(const char* str, size_t len, Symbol* ns) {
+    uint32_t hash = Symbol::hash_symbol(str, len);
+    Symbol* symbol = this->_lookup_symbol(hash, str, len, ns);
+    if(!symbol) {
+      symbol = (Symbol*)this->allocValue(sizeof(Symbol) - sizeof(Value));
+      symbol->hash = hash;
+      symbol->ns = ns;
+      symbol->name.typeID = TypeID::Symbol;
+      symbol->name._string = this->createObjectString(str, len);
+      this->symbols.insert(std::pair<uint32_t,Symbol*>(hash, symbol));
+    }
+    return symbol;
+  }
+  SoftDoc_IMPLi(Symbol*) Document::createSymbol(const char* str, size_t len, Symbol* ns) {
+    uint32_t hash = Symbol::hash_symbol(str, len);
+    Symbol* symbol = (Symbol*)this->allocValue(sizeof(Symbol) - sizeof(Value));
+    symbol->hash = hash;
+    symbol->ns = ns?ns:symbol;
+    symbol->name.typeID = TypeID::Symbol;
+    symbol->name._string = this->createObjectString(str, len);
+    return symbol;
+  }
+  SoftDoc_IMPLn(void) Document::printDictionary() {
+    for(std::map<uint32_t,Symbol*>::iterator it=this->symbols.begin();it!=this->symbols.end();it++) {
+      printf("> symbol '%s'\n", it->second->name._string->buffer);
+    }
   }
 }

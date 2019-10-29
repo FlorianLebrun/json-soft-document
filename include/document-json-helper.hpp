@@ -158,13 +158,6 @@ public:
     obj->buffer[obj->length] = 0;
     return obj;
   }
-  ObjectSymbol* createSymbol(tString& _string) {
-    ObjectSymbol* obj = (ObjectSymbol*)document->alloc(sizeof(ObjectSymbol) + _string.len);
-    obj->length = this->copyString(obj->buffer, _string);
-    obj->buffer[obj->length] = 0;
-    obj->hash = ObjectSymbol::hash_symbol(obj->buffer, obj->length);
-    return obj;
-  }
 
   void peekString(char endchar) {
     size_t start = cursor;
@@ -270,7 +263,7 @@ public:
 
     if (expPart) {
       token.id = tToken::NUMBER;
-      token._number = intPart*pow(10, expPart);
+      token._number = intPart * pow(10, expPart);
     }
     else {
       token.id = tToken::INTEGER;
@@ -371,7 +364,7 @@ public:
     if (token.id == tToken::STRING) {
 
       // Read classname property
-      if (this->classname_property && token._string.equals(this->classname_property)) { 
+      if (this->classname_property && token._string.equals(this->classname_property)) {
         peekToken();
         if (token.id == tToken::ASSOCIATION) {
           peekToken();
@@ -381,12 +374,12 @@ public:
         }
         Value classname(document);
         peekValue(&classname);
-        if (!obj->classname) {
-          if (classname.typeID == TypeID::String) {
-            obj->classname = document->createObjectSymbol(classname._string);
-          }
-          else if(classname.typeID == TypeID::Symbol) {
-            obj->classname = classname._symbol;
+
+        Property* classname_prop = obj->map(this->document->className_symbol, this->document);
+        if (classname_prop->value.is_undefined()) {
+          if (classname.typeID == TypeID::String || classname.typeID == TypeID::Symbol) {
+            classname_prop->value.typeID = TypeID::Symbol;
+            classname_prop->value._string = classname._string;
           }
           else {
             logError("classname shall be defined with a string");
@@ -398,7 +391,8 @@ public:
       }
       // Read normal property
       else {
-        Property* prop = obj->map(token._string.ptr, token._string.len, document);
+        Symbol* key = this->document->mapSymbol(token._string.ptr, token._string.len);
+        Property* prop = obj->map(key, document);
         if (prop->value.typeID != TypeID::Undefined) {
           logError("an element is declared more than ones");
         }
@@ -414,10 +408,8 @@ public:
     }
   }
 
-
-  void peekObjectMap(Value* value, ObjectSymbol* classname) {
-    ObjectMap* obj = (value->typeID==TypeID::Map)?value->_map:document->createObjectMap();
-    obj->classname = classname;
+  void peekObjectMap(Value* value) {
+    ObjectMap* obj = (value->typeID == TypeID::Map) ? value->_map : document->createObjectMap();
     value->typeID = TypeID::Map;
     value->_object = obj;
 
@@ -477,7 +469,7 @@ public:
     }
   }
 
-  void peekObjectExpression(Value* value, ObjectSymbol* symbol) {
+  void peekObjectExpression(Value* value, ObjectString* symbol) {
     ObjectArray* obj = document->createObjectArray();
     value->typeID = TypeID::Array;
     value->_array = obj;
@@ -514,14 +506,16 @@ public:
         tString _string = token._string;
         peekToken();
         if (token.id == tToken::BEGIN_XPR) {
-          peekObjectExpression(value, this->createSymbol(_string));
+          peekObjectExpression(value, this->createString(_string));
         }
         else if (token.id == tToken::BEGIN_OBJECT) {
-          peekObjectMap(value, this->createSymbol(_string));
+          value->map(this->document->className_symbol)
+            .set_symbol(_string.ptr, _string.len);
+          peekObjectMap(value);
         }
         else if (_string.symbolic) {
           value->typeID = TypeID::Symbol;
-          value->_object = this->createSymbol(_string);
+          value->_object = this->createString(_string);
         }
         else {
           value->typeID = TypeID::String;
@@ -554,7 +548,7 @@ public:
       break;
       // Parse Collection DataValue
     case tToken::BEGIN_OBJECT:
-      peekObjectMap(value, 0);
+      peekObjectMap(value);
       break;
       // Parse Array DataValue
     case tToken::BEGIN_ARRAY:
@@ -572,11 +566,13 @@ template <bool extended_json, bool indented>
 struct JsonDocumentWriter {
   std::stringstream out;
   const char* classname_property;
+  Document* doc;
   int level;
 
-  JsonDocumentWriter(const char* classname_property = 0) {
+  JsonDocumentWriter(Document* doc, const char* classname_property = 0) {
     this->classname_property = classname_property;
     this->level = 0;
+    this->doc = doc;
   }
   void indent() {
     if (indented) this->level++;
@@ -594,26 +590,37 @@ struct JsonDocumentWriter {
     typedef ObjectMap::iterator _map_iterator;
     _map_iterator it(obj);
     int first = 1;
-    if (obj->classname) {
-      if(this->classname_property) {
-        out << "{\""<<this->classname_property<<"\":";
-        writeString(obj->classname->buffer, obj->classname->length);
+    Property* classname = obj->find(this->doc->className_symbol);
+    if (classname) {
+      if (this->classname_property) {
+        out << '{';
+        this->indent();
+        this->writeLineSpace();
+        out << "\"" << this->classname_property << "\":";
+        this->stringify(classname->value);
         first = 0;
       }
       else if (extended_json) {
-        stringifySymbol(obj->classname);
+        if (classname->value.typeID == TypeID::String) this->stringifyString(classname->value._string);
+        else if (classname->value.typeID == TypeID::Symbol) this->stringifySymbol(classname->value._string);
         out << '{';
+        this->indent();
       }
-      else out << '{';
+      else {
+        out << '{';
+        this->indent();
+      }
     }
-    else out << '{';
-    this->indent();
+    else {
+      out << '{';
+      this->indent();
+    }
     for (Property* prop = it.begin(); prop; prop = it.next()) {
-      if (prop->value.typeID != TypeID::Undefined) {
+      if (!prop->key->ns && prop->value.typeID != TypeID::Undefined) {
         if (!first) out << ",";
         else first = 0;
         this->writeLineSpace();
-        out << '"' << prop->key->buffer << '"';
+        out << '"' << prop->key->name.toString() << '"';
         out << ':';
         stringify(prop->value);
       }
@@ -657,24 +664,24 @@ struct JsonDocumentWriter {
   void stringifyString(ObjectString* obj) {
     writeString(obj->buffer, obj->length);
   }
-  bool checkSymbolIsStandard(ObjectSymbol* obj) {
+  bool checkSymbolIsStandard(ObjectString* obj) {
 
     // Check first char
     char c = obj->buffer[0];
-    bool isStandard = (c>='a'&&c<='z') || (c>='A'&&c<='Z') || (c=='_');
-    if(!isStandard) return false;
+    bool isStandard = (c >= 'a'&&c <= 'z') || (c >= 'A'&&c <= 'Z') || (c == '_');
+    if (!isStandard) return false;
 
     // Check inner char
-    for(size_t i=1;i<obj->length;i++) {
+    for (size_t i = 1; i < obj->length; i++) {
       char c = obj->buffer[i];
-      bool isStandard = (c>='a'&&c<='z') || (c>='A'&&c<='Z') || (c>='0' && c<= '9') || (c=='_');
-      if(!isStandard) return false;
+      bool isStandard = (c >= 'a'&&c <= 'z') || (c >= 'A'&&c <= 'Z') || (c >= '0' && c <= '9') || (c == '_');
+      if (!isStandard) return false;
     }
     return true;
   }
-  void stringifySymbol(ObjectSymbol* obj) {
+  void stringifySymbol(ObjectString* obj) {
     if (extended_json) {
-      if(this->checkSymbolIsStandard(obj)) {
+      if (this->checkSymbolIsStandard(obj)) {
         out << obj->buffer;
         return;
       }
@@ -709,19 +716,19 @@ struct JsonDocumentWriter {
     case TypeID::String:
       return this->stringifyString(x._string);
     case TypeID::Symbol:
-      return this->stringifySymbol(x._symbol);
+      return this->stringifySymbol(x._string);
     }
   }
   std::string flush() {
     std::string tout = this->out.str();
-    uint8_t* buffer = (uint8_t*)::malloc((tout.size()+1)*2);
+    uint8_t* buffer = (uint8_t*)::malloc((tout.size() + 1) * 2);
     SoftDocument::EncodingBuffer src((uint8_t*)tout.c_str(), tout.size());
-    SoftDocument::EncodingBuffer dst(buffer, (tout.size()+1)*2);
+    SoftDocument::EncodingBuffer dst(buffer, (tout.size() + 1) * 2);
     if (SoftDocument::Ascii_to_Utf8(src, dst)) {
       throw std::exception("encoding overflow");
     }
     dst.start[0] = 0;
-    std::string sout((char*)buffer, int(dst.start-buffer));
+    std::string sout((char*)buffer, int(dst.start - buffer));
     ::free(buffer);
     return sout;
   }
@@ -734,25 +741,25 @@ struct JSON {
     reader.peekValue(&value);
   }
   static std::string stringify(Value &x, bool indented = false, const char* classname_property = 0) {
-    if(indented) {
-      JsonDocumentWriter<false, true> writer(classname_property);
+    if (indented) {
+      JsonDocumentWriter<false, true> writer(x.document, classname_property);
       writer.stringify(x);
       return writer.flush();
     }
     else {
-      JsonDocumentWriter<false, false> writer(classname_property);
+      JsonDocumentWriter<false, false> writer(x.document, classname_property);
       writer.stringify(x);
       return writer.flush();
     }
   }
   static std::string stringify_ex(Value &x, bool indented = false, const char* classname_property = 0) {
-    if(indented) {
-      JsonDocumentWriter<true, true> writer(classname_property);
+    if (indented) {
+      JsonDocumentWriter<true, true> writer(x.document, classname_property);
       writer.stringify(x);
       return writer.flush();
     }
     else {
-      JsonDocumentWriter<true, false> writer(classname_property);
+      JsonDocumentWriter<true, false> writer(x.document, classname_property);
       writer.stringify(x);
       return writer.flush();
     }

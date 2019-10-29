@@ -1,7 +1,7 @@
 
 namespace SoftDocument {
-	template <typename Document, typename Value, typename ObjectSymbol>
+	template <typename Document, typename Value, typename ObjectString>
 	struct ObjectExpression : ObjectArray<Document, Value> {
-		ObjectSymbol* name;
+		ObjectString* name;
 	};
 }

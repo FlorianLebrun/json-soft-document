@@ -14,6 +14,11 @@ namespace SoftDocument {
 	inline static intptr_t alignPtr(intptr_t offset) {
 		return ((-offset)&(sizeof(void*) - 1)) + offset;
 	}
+  
+  uint32_t hash_utf8_crc31(uint32_t crc, const void *buf, size_t size);
+  uint32_t hash_utf8_icrc31(uint32_t crc, const void *buf, size_t size);
+  uint32_t hash_murmur3_31(const uint8_t* key, size_t len, uint32_t seed);
+  uint32_t hash_jenkins_31(const uint8_t* key, size_t length);
 
 	struct EncodingBuffer {
 		uint8_t* start;
@@ -101,8 +106,29 @@ namespace SoftDocument {
 		return size_t(s_end - s);
 	}
 	
-  uint32_t hash_utf8_crc31(uint32_t crc, const void *buf, size_t size);
-  uint32_t hash_utf8_icrc31(uint32_t crc, const void *buf, size_t size);
-  uint32_t hash_murmur3_31(const uint8_t* key, size_t len, uint32_t seed);
-  uint32_t hash_jenkins_31(const uint8_t* key, size_t length);
+	template <bool caseInsensitive>
+	struct SymbolBase;
+
+	template <>
+	struct SymbolBase<true> {
+		static uint32_t hash_symbol(const char* str, size_t len) {
+			return SoftDocument::hash_utf8_icrc31(0, str, len);
+		}
+	protected:
+		static int compare_bytes(const char* buffer1, const char* buffer2, size_t length) {
+			return _strnicmp(buffer1, buffer2, length);
+		}
+	};
+
+	template <>
+	struct SymbolBase<false> {
+		static uint32_t hash_symbol(const char* str, size_t len) {
+			return SoftDocument::hash_murmur3_31((uint8_t*)str, len, 0);
+		}
+	protected:
+		static int compare_bytes(const char* buffer1, const char* buffer2, size_t length) {
+			return memcmp(buffer1, buffer2, length);
+		}
+	};
+
 }
