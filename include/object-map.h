@@ -27,7 +27,7 @@ namespace SoftDocument {
 		struct iterator {
 			Property* cproperty;
 			inline iterator(ObjectMap* obj) {
-				this->cproperty = obj->first;
+				this->cproperty = obj?obj->first:0;
 			}
 			inline ObjectSymbol* key() {
 				return this->cproperty->key;
@@ -114,14 +114,10 @@ namespace SoftDocument {
 			}
 			return obj;
 		}
-		Property* map(const char* symbol, Document* document) {
-			int symbolLen = strlen(symbol);
+		Property* map(const char* symbol, size_t symbolLen, Document* document) {
 			return this->map(ObjectSymbol::hash_symbol(symbol, symbolLen), symbol, symbolLen, document);
 		}
-		Property* map(const char* symbol, int symbolLen, Document* document) {
-			return this->map(ObjectSymbol::hash_symbol(symbol, symbolLen), symbol, symbolLen, document);
-		}
-		Property* map(uint32_t hash, const char* buffer, int length, Document* document) {
+		Property* map(uint32_t hash, const char* buffer, size_t length, Document* document) {
 
 			// Find existing property
 			for (Property* cprop = this->first; cprop; cprop = cprop->next) {
@@ -153,14 +149,10 @@ namespace SoftDocument {
 			this->last = prop;
 			return prop;
 		}
-		Property* find(const char* symbol, Document* document) {
-			int symbolLen = strlen(symbol);
-			return this->find(ObjectSymbol::hash_symbol(symbol, symbolLen), symbol, symbolLen, document);
+		Property* find(const char* symbol, size_t symbolLen) {
+			return this->find(ObjectSymbol::hash_symbol(symbol, symbolLen), symbol, symbolLen);
 		}
-		Property* find(const char* symbol, int symbolLen, Document* document) {
-			return this->find(ObjectSymbol::hash_symbol(symbol, symbolLen), symbol, symbolLen, document);
-		}
-		Property* find(uint32_t hash, const char* buffer, int length) {
+		Property* find(uint32_t hash, const char* buffer, size_t length) {
 			for (Property* cprop = this->first; cprop; cprop = cprop->next) {
 				int c = cprop->key->compare(hash, buffer, length);
 				if (!c) return cprop;
@@ -389,10 +381,6 @@ namespace SoftDocument {
 
 			document->freeHashMap((void**)old_map, old_shift);
 		}
-		Property* map(const char* symbol, Document* document) {
-			size_t symbolLen = strlen(symbol);
-			return this->map(ObjectSymbol::hash_symbol(symbol, symbolLen), symbol, symbolLen, document);
-		}
 		Property* map(const char* symbol, size_t symbolLen, Document* document) {
 			return this->map(ObjectSymbol::hash_symbol(symbol, symbolLen), symbol, symbolLen, document);
 		}
@@ -451,6 +439,12 @@ namespace SoftDocument {
 			prop->next = next;
 			this->limit--;
 			return prop;
+		}
+		Property* find(const char* symbol, size_t symbolLen) {
+			throw "todo";
+		}
+		Property* find(uint32_t hash, const char* buffer, size_t length) {
+			throw "todo";
 		}
 	};
 }

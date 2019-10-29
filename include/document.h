@@ -1,6 +1,8 @@
 
 #ifndef _Soft_Document__H_
 #define _Soft_Document__H_
+#pragma pack(push)
+#pragma pack()
 
 #include <stdint.h>
 #include <sstream>
@@ -15,4 +17,5 @@
 
 #include "document-base.hpp"
 
+#pragma pack(pop)
 #endif

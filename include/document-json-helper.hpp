@@ -50,21 +50,19 @@ public:
 
   uint8_t char_def[256];
   const char* classname_property;
-  bool classname_preserve;
 
   tToken token;
   const char* buffer;
   int cursor;
-	size_t bufferSize;
+  size_t bufferSize;
   int line;
   bool lenient;
 
   Document* document;
 
-  JsonDocumentReader(Document* document, const char* buffer, size_t bufferSize, const char* classname_property = 0, bool classname_preserve = false) {
+  JsonDocumentReader(Document* document, const char* buffer, size_t bufferSize, const char* classname_property = 0) {
     this->document = document;
     this->classname_property = classname_property;
-    this->classname_preserve = classname_preserve;
     this->buffer = buffer;
     this->bufferSize = bufferSize;
     this->line = 1;
@@ -397,10 +395,6 @@ public:
         else {
           logError("classname cannot be defined twice");
         }
-        if(this->classname_preserve) {
-          Property* prop = obj->map(this->classname_property, document);
-          prop->value = classname;
-        }
       }
       // Read normal property
       else {
@@ -422,7 +416,7 @@ public:
 
 
   void peekObjectMap(Value* value, ObjectSymbol* classname) {
-    ObjectMap* obj = document->createObjectMap();
+    ObjectMap* obj = (value->typeID==TypeID::Map)?value->_map:document->createObjectMap();
     obj->classname = classname;
     value->typeID = TypeID::Map;
     value->_object = obj;
@@ -574,17 +568,31 @@ public:
   }
 };
 
-template <bool extended_json>
+template <bool extended_json, bool indented>
 struct JsonDocumentWriter {
   std::stringstream out;
   const char* classname_property;
+  int level;
 
   JsonDocumentWriter(const char* classname_property = 0) {
     this->classname_property = classname_property;
+    this->level = 0;
+  }
+  void indent() {
+    if (indented) this->level++;
+  }
+  void unindent() {
+    if (indented) this->level--;
+  }
+  void writeLineSpace() {
+    if (indented) {
+      out << "\n";
+      for (int i = 0; i < this->level; i++) out << "  ";
+    }
   }
   void stringifyMap(ObjectMap* obj) {
-		typedef ObjectMap::iterator _map_iterator;
-		_map_iterator it(obj);
+    typedef ObjectMap::iterator _map_iterator;
+    _map_iterator it(obj);
     int first = 1;
     if (obj->classname) {
       if(this->classname_property) {
@@ -599,26 +607,32 @@ struct JsonDocumentWriter {
       else out << '{';
     }
     else out << '{';
+    this->indent();
     for (Property* prop = it.begin(); prop; prop = it.next()) {
       if (prop->value.typeID != TypeID::Undefined) {
         if (!first) out << ",";
         else first = 0;
+        this->writeLineSpace();
         out << '"' << prop->key->buffer << '"';
         out << ':';
         stringify(prop->value);
       }
       prop = prop->next;
     }
+    this->unindent();
+    this->writeLineSpace();
     out << "}";
   }
   void stringifyArray(ObjectArray* obj) {
     int first = 1;
     out << "[";
+    this->indent();
     for (Item* item = obj->firstItem; item; item = item->next) {
       if (!first) out << ",";
       else first = 0;
       stringify(item->value);
     }
+    this->unindent();
     out << "]";
   }
   void writeString(const char* buffer, int size) {
@@ -701,8 +715,8 @@ struct JsonDocumentWriter {
   std::string flush() {
     std::string tout = this->out.str();
     uint8_t* buffer = (uint8_t*)::malloc((tout.size()+1)*2);
-		SoftDocument::EncodingBuffer src((uint8_t*)tout.c_str(), tout.size());
-		SoftDocument::EncodingBuffer dst(buffer, (tout.size()+1)*2);
+    SoftDocument::EncodingBuffer src((uint8_t*)tout.c_str(), tout.size());
+    SoftDocument::EncodingBuffer dst(buffer, (tout.size()+1)*2);
     if (SoftDocument::Ascii_to_Utf8(src, dst)) {
       throw std::exception("encoding overflow");
     }
@@ -714,19 +728,33 @@ struct JsonDocumentWriter {
 };
 
 struct JSON {
-  static void parse(Value& value, const char* buffer, int length = 0, const char* classname_property = 0, bool classname_preserve = false) {
-    JsonDocumentReader reader(value.document, buffer, length ? length : strlen(buffer), classname_property, classname_preserve);
+  static void parse(Value& value, const char* buffer, int length = 0, const char* classname_property = 0) {
+    JsonDocumentReader reader(value.document, buffer, length ? length : strlen(buffer), classname_property);
     reader.peekToken();
     reader.peekValue(&value);
   }
-  static std::string stringify(Value &x, const char* classname_property = 0) {
-    JsonDocumentWriter<false> writer(classname_property);
-    writer.stringify(x);
-    return writer.flush();
+  static std::string stringify(Value &x, bool indented = false, const char* classname_property = 0) {
+    if(indented) {
+      JsonDocumentWriter<false, true> writer(classname_property);
+      writer.stringify(x);
+      return writer.flush();
+    }
+    else {
+      JsonDocumentWriter<false, false> writer(classname_property);
+      writer.stringify(x);
+      return writer.flush();
+    }
   }
-  static std::string stringify_ex(Value &x, const char* classname_property = 0) {
-    JsonDocumentWriter<true> writer(classname_property);
-    writer.stringify(x);
-    return writer.flush();
+  static std::string stringify_ex(Value &x, bool indented = false, const char* classname_property = 0) {
+    if(indented) {
+      JsonDocumentWriter<true, true> writer(classname_property);
+      writer.stringify(x);
+      return writer.flush();
+    }
+    else {
+      JsonDocumentWriter<true, false> writer(classname_property);
+      writer.stringify(x);
+      return writer.flush();
+    }
   }
 };
